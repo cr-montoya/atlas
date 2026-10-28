@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "finanzas/_macros.html" import tira %}
+{% block titulo %}{{ tipos[q.tipo] }} {{ q.fecha }}{% endblock %}
+{% block contenido %}
+<p><a href="/quincena">Quincena</a></p>
+{% if confirmada %}<p class="aviso bien" role="status">Reparto confirmado y guardado.{% if abonos %} Se registraron {{ abonos|length }} {{ "abono" if abonos|length == 1 else "abonos" }}.{% endif %}</p>{% endif %}
+<section class="tarjeta">
+  <h1>{{ tipos[q.tipo] if q.tipo != "quincena" else "Quincena" }} del {{ q.fecha|fecha_corta }}</h1>
+  <p class="cifra-hero">{{ q.neto|cop }}</p>
+  <p class="tenue">{% if q.plantilla %}Plantilla del {{ q.plantilla }}{% else %}Sin plantilla{% endif %}{% if q.trm %} · TRM <span class="dato">{{ q.trm|trm }}</span>{% endif %}</p>
+  {{ tira(segmentos) }}
+</section>
+
+{% include "finanzas/_pvr.html" %}
+
+<section class="tarjeta" aria-labelledby="t-l">
+  <div class="cabecera" style="margin-bottom:0.5rem"><h2 id="t-l" style="margin:0">Líneas</h2><a class="secundario" href="/gasto">Gasto rápido</a></div>
+  <ul class="filas">
+    {% for l in lineas %}{% include "finanzas/_fila_real.html" %}{% endfor %}
+  </ul>
+</section>
+{% if abonos %}
+<section class="tarjeta" aria-labelledby="t-a">
+  <h2 id="t-a" style="margin-top:0">Abonos creados</h2>
+  <ul class="filas">
+    {% for a in abonos %}
+    <li><a class="fila nombre" href="/deudas/{{ a.deuda_id }}"><span>{{ a.nombre }}</span>{% if a.moneda == "USD" %}<small>TRM {{ a.trm|trm }} · costo {{ a.costo_cop|cop }} COP</small>{% endif %}</a><span class="monto cifra">{{ a.monto|moneda(a.moneda) }}{% if a.moneda == "USD" %} USD{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

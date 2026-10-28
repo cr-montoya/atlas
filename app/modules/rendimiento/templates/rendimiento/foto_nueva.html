@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Agregar fotos{% endblock %}
+{% block contenido %}
+<div class="r registro foto-nueva">
+<p><a href="/rendimiento/fotos?pose={{ pose }}">{{ icono("arrow-left", 18) }} Antes y después</a></p>
+<h1>Agregar fotos</h1>
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+
+<nav class="segmentos chips tres" aria-label="Pose">
+  {% for k, v in POSES.items() %}
+  <a href="?pose={{ k }}" class="chip-tipo{% if k == pose %} activo{% endif %}" {% if k == pose %}aria-current="page"{% endif %}>{{ v }}</a>
+  {% endfor %}
+</nav>
+
+<section class="camara" data-camara data-pose="{{ pose }}" hidden>
+  <div class="visor">
+    <video playsinline muted autoplay aria-label="Cámara"></video>
+    {% if anterior %}<img class="guia" src="/rendimiento/fotos/{{ anterior.id }}/imagen" alt="" aria-hidden="true" width="{{ anterior.ancho }}" height="{{ anterior.alto }}">{% endif %}
+    <span class="cuenta" data-cuenta aria-live="assertive"></span>
+    <canvas hidden></canvas>
+    <img class="vista-previa" alt="Vista previa de la foto" hidden>
+  </div>
+  {% if anterior %}
+  <label for="guia-opacidad">Guía: foto del {{ anterior.fecha|fecha_corta }}</label>
+  <input id="guia-opacidad" type="range" min="0" max="80" value="35" data-opacidad aria-valuetext="35 %">
+  {% else %}<p class="tenue">Es tu primera foto de {{ POSES[pose]|lower }}: la próxima vez verás esta encima para repetir el encuadre.</p>{% endif %}
+  <div class="controles-camara">
+    <button type="button" class="secundario" data-voltear>{{ icono("arrows-clockwise", 20) }}<span>Cambiar cámara</span></button>
+    <div class="segmentos temporizador" role="radiogroup" aria-label="Temporizador">
+      {% for s in (0, 3, 10) %}<label><input type="radio" name="temporizador" value="{{ s }}" {% if s == 10 %}checked{% endif %}><span>{{ "Ya" if s == 0 else s ~ " s" }}</span></label>{% endfor %}
+    </div>
+  </div>
+  <div class="barra-accion acciones-captura">
+    <button type="button" class="primario" data-capturar>Tomar foto</button>
+    <div class="tras-captura" hidden>
+      <button type="button" class="secundario" data-repetir>Repetir</button>
+      <button type="button" class="primario" data-guardar>Guardar foto</button>
+    </div>
+  </div>
+</section>
+
+<p class="aviso" data-sin-camara hidden role="note">La cámara en vivo con la guía necesita HTTPS: abre <a href="https://atlas.local/rendimiento/fotos/nueva?pose={{ pose }}">https://atlas.local</a>. Mientras tanto, sube la foto desde la galería o tus archivos, más abajo.</p>
+
+<section class="tarjeta subir-fotos" id="subir" aria-labelledby="h-subir">
+  <h2 id="h-subir">Desde la galería o tus archivos</h2>
+  <p class="tenue">Para fotos viejas o tomadas con otra app. Puedes elegir varias, todas de {{ POSES[pose]|lower }}.</p>
+  <form method="post" action="/rendimiento/fotos" enctype="multipart/form-data" class="subir-foto" data-subir>
+    <input type="hidden" name="pose" value="{{ pose }}">
+    <div class="subir-con-anterior">
+      <label class="zona-soltar" data-zona>
+        <input name="foto" type="file" accept="image/jpeg,image/png,image/*" multiple class="oculto-visual" data-archivos>
+        {{ icono("plus", 28) }}
+        <strong>Elegir fotos</strong>
+        <span class="tenue solo-puntero">o arrástralas aquí</span>
+        <small class="tenue">JPEG o PNG, hasta 20 a la vez</small>
+      </label>
+      {% if anterior %}<figure class="anterior"><img src="/rendimiento/fotos/{{ anterior.id }}/imagen?mini=1" alt="Foto anterior de {{ POSES[pose]|lower }}" width="{{ anterior.ancho }}" height="{{ anterior.alto }}">
+        <figcaption class="tenue">Anterior: {{ anterior.fecha|fecha_corta }}</figcaption></figure>{% endif %}
+    </div>
+    <ul class="elegidas" data-elegidas aria-live="polite"></ul>
+    <label class="check"><input type="checkbox" name="fecha_de_la_foto" value="1" checked> Usar la fecha en que se tomó cada foto</label>
+    <div class="dos">
+      <div><label for="f-fecha">Fecha si la foto no la trae</label><input id="f-fecha" name="fecha" value="{{ hoy }}" inputmode="numeric" autocomplete="off"></div>
+      <div><label for="f-notas">Notas</label><input id="f-notas" name="notas" autocomplete="off" placeholder="En ayunas, después de entrenar…"></div>
+    </div>
+    <button type="submit" class="secundario" data-enviar data-texto-envio="Subiendo…">Subir fotos</button>
+  </form>
+</section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/fotos.js?v=2"></script>{% endblock %}

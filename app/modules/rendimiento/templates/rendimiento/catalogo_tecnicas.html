@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Catálogo de técnicas{% endblock %}
+{% block contenido %}
+<div class="r registro">
+<p><a href="/rendimiento/mas">{{ icono("arrow-left", 18) }} Más</a></p>
+<h1>Catálogo de técnicas</h1>
+<nav class="chips-botones filtros" aria-label="Disciplina">
+  {% for k, v in DISCIPLINAS.items() %}<a class="chip-tipo{% if k == disciplina %} activo{% endif %}" href="?disciplina={{ k }}" {% if k == disciplina %}aria-current="page"{% endif %}>{{ v }}</a>{% endfor %}
+</nav>
+{% if ok %}<p class="aviso bien" role="status">Técnica agregada.</p>{% endif %}
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+
+<details class="tarjeta" {% if error %}open{% endif %}>
+  <summary>Agregar técnica de {{ DISCIPLINAS[disciplina] }}</summary>
+  <form method="post" action="/rendimiento/catalogo/tecnicas">
+    <input type="hidden" name="disciplina" value="{{ disciplina }}">
+    <label for="t-familia">Familia</label>
+    <input id="t-familia" name="familia" list="familias" value="{{ valores.get('familia', '') }}" autocomplete="off" required>
+    <datalist id="familias">{% for f in tecnicas|map(attribute="familia")|unique %}<option value="{{ f }}">{% endfor %}</datalist>
+    <label for="t-nombre">Nombre</label>
+    <input id="t-nombre" name="nombre" value="{{ valores.get('nombre', '') }}" autocomplete="off" required>
+    <button type="submit" class="primario">Agregar técnica</button>
+  </form>
+</details>
+
+{% for familia, items in tecnicas|groupby("familia") %}
+<h2>{{ familia|capitalize }}</h2>
+<div class="tarjeta r-filas">
+  {% for t in items %}
+  <div class="fila-catalogo{% if not t.activo %} apagada{% endif %}" id="t-{{ t.id }}">
+    <span>{{ t.nombre }}{% if not t.activo %}<small class="tenue">oculta</small>{% endif %}</span>
+    <span></span>
+    <form method="post" action="/rendimiento/catalogo/tecnicas/{{ t.id }}">
+      <input type="hidden" name="activo" value="{{ '0' if t.activo else '1' }}">
+      <button type="submit" class="fantasma">{{ "Ocultar" if t.activo else "Mostrar" }}</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+</div>
+{% endblock %}

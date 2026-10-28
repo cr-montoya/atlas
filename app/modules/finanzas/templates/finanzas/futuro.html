@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% from "finanzas/_macros.html" import barra_meta, estimado %}
+{% block titulo %}Futuro{% endblock %}
+{% block cabeza %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" integrity="sha384-Mx5lkUEQPM1pOJCwFtUICyX45KNojXbkWdYhkKUKsbv391mavbfoAmONbzkgYPzR" crossorigin="anonymous" defer></script>
+{% endblock %}
+{% block contenido %}
+<div class="cabecera"><div><h1>Futuro</h1><p class="suave">Proyección, metas y fondos de previsión.</p></div></div>
+{% if ok == "escenario" %}<p class="aviso bien" role="status">Escenario guardado. El tablero y el resumen para IA ya lo usan.</p>{% endif %}
+
+<section class="tarjeta" aria-labelledby="t-proyeccion">
+  <h2 id="t-proyeccion" style="margin-top:0">Proyección a {{ esc.meses }} meses</h2>
+  {% if error_escenario %}<p class="aviso mal" role="alert">{{ error_escenario }}</p>{% endif %}
+  <form method="post" action="/futuro/escenario" hx-post="/futuro/proyeccion" hx-trigger="input changed delay:400ms, change"
+        hx-target="#proyeccion" hx-swap="outerHTML" data-cuidar>
+    <fieldset>
+      <legend>Gasto libre al mes ({{ "tarjeta" if demo else "Tarjeta Uno" }} + efectivo)</legend>
+      <div class="segmentos perfiles">
+        {% set nombres = {"disciplinado": "Disciplinado", "medio": "Punto medio", "relajado": "Relajado"} %}
+        {% for clave, (rc, ef) in perfiles.items() %}
+        <label><input type="radio" name="perfil" value="{{ clave }}" {% if esc.tarjeta_mes == rc and esc.libre == ef %}checked{% endif %}>
+          <span class="perfil"><strong>{{ nombres[clave] }}</strong><small class="cifra">{{ rc|cop }} + {{ ef|cop }}</small></span></label>
+        {% endfor %}
+      </div>
+      {% if not (esc.tarjeta_mes, esc.libre) in perfiles.values() %}<p class="tenue">Personalizado: {{ "tarjeta" if demo else "Tarjeta Uno" }} {{ esc.tarjeta_mes|cop }} y efectivo {{ esc.libre|cop }}.</p>{% endif %}
+      <p class="tenue">{% if demo %}Tarjeta{% else %}Tarjeta Uno (incluye judo y Centro Uno){% endif %} más efectivo libre, aparte del gasto básico.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Qué hacer con lo que sobra</legend>
+      <div class="segmentos">
+        <label><input type="radio" name="sobrante" value="ahorro" {% if esc.sobrante_a_ahorro %}checked{% endif %}><span>Plan: {{ "tarjeta" if demo else "Black" }} y luego ahorro</span></label>
+        <label><input type="radio" name="sobrante" value="deudas" {% if not esc.sobrante_a_ahorro %}checked{% endif %}><span>Todo a deudas</span></label>
+      </div>
+    </fieldset>
+    <p class="tenue">En el plan, el sobrante prepaga solo las deudas marcadas para prepagar ({{ "la tarjeta" if demo else "la tarjeta" }}); las demás reciben su cuota y sus abonos directos (cesantías), y el resto va al fondo de emergencia: primero la meta 1 y luego M4.</p>
+    <div class="dos">
+      <div>
+        <label for="e-ahorro">Ahorro al mes</label>
+        <input id="e-ahorro" name="ahorro_mensual" class="monto" type="text" inputmode="numeric" autocomplete="off" value="{{ esc.ahorro_mensual|cop }}" {% if errores.ahorro_mensual %}aria-invalid="true"{% endif %}>
+      </div>
+      <div>
+        <label for="e-meses">Horizonte</label>
+        <select id="e-meses" name="meses"><option value="12" {% if esc.meses == 12 %}selected{% endif %}>12 meses</option><option value="24" {% if esc.meses == 24 %}selected{% endif %}>24 meses</option></select>
+      </div>
+    </div>
+    <label class="check"><input type="checkbox" name="incluir_extra" value="1" {% if esc.incluir_extra %}checked{% endif %}> Contar con el {{ "ingreso extra" if demo else "extra freelance" }}</label>
+    <fieldset>
+      <legend>Orden entre las deudas que se prepagan</legend>
+      <div class="segmentos">
+        <label><input type="radio" name="estrategia" value="avalancha" {% if esc.estrategia == "avalancha" %}checked{% endif %}><span>Avalancha</span></label>
+        <label><input type="radio" name="estrategia" value="bola" {% if esc.estrategia == "bola" %}checked{% endif %}><span>Bola de nieve</span></label>
+      </div>
+    </fieldset>
+    <details>
+      <summary>Más supuestos {{ estimado() }}</summary>
+      <div class="dos">
+        <div><label for="e-neto">Neto por quincena</label><input id="e-neto" name="neto_quincena" class="monto" type="text" inputmode="numeric" autocomplete="off" value="{{ esc.neto_quincena|cop }}"></div>
+        <div><label for="e-basico">Gasto básico al mes</label><input id="e-basico" name="gasto_basico" class="monto" type="text" inputmode="numeric" autocomplete="off" value="{{ esc.gasto_basico|cop }}"></div>
+        <div><label for="e-ret">Retención sobre rendimientos (%)</label><input id="e-ret" name="retencion" class="monto" type="text" inputmode="decimal" autocomplete="off" value="{{ esc.retencion_ppm|pct }}"></div>
+        <div><label for="e-inv">Rendimiento esperado de la inversión (% E.A.)</label><input id="e-inv" name="inversion_ea" class="monto" type="text" inputmode="decimal" autocomplete="off" value="{{ esc.inversion_ea_ppm|pct }}"></div>
+        <div><label for="e-m4">Meta M4</label><input id="e-m4" name="meta_m4" class="monto" type="text" inputmode="numeric" autocomplete="off" value="{{ esc.meta_m4|cop }}"></div>
+      </div>
+      <p class="tenue">El gasto básico incluye las cuotas mínimas de las deudas (por ejemplo, {{ "el crédito educativo" if demo else "Educa" }}).</p>
+      <label class="check"><input type="checkbox" name="topar_en_m4" value="1" {% if esc.topar_en_m4 %}checked{% endif %}> Con M4 cumplido, el sobrante va a inversión de largo plazo</label>
+      <p class="tenue">Acciones o ETF diversificados (por ejemplo en trii), 5 años o más. El rendimiento es variable y sin garantía.</p>
+      <label class="check"><input type="checkbox" name="incapacidad_activa" value="1" {% if esc.incapacidad_activa %}checked{% endif %}> Escenario incapacidad (cirugía)</label>
+      <div class="dos tres-col">
+        <div><label for="e-inc-ini">Desde</label><input id="e-inc-ini" name="incapacidad_inicio" type="month" value="{{ esc.incapacidad_inicio }}"></div>
+        <div><label for="e-inc-m">Meses</label><input id="e-inc-m" name="incapacidad_meses" type="number" inputmode="numeric" min="1" max="12" value="{{ esc.incapacidad_meses }}"></div>
+        <div><label for="e-inc-p">% del ingreso</label><input id="e-inc-p" name="incapacidad_pct" class="monto" type="text" inputmode="decimal" autocomplete="off" value="{{ esc.incapacidad_pct_ppm|pct }}"></div>
+      </div>
+    </details>
+    <button type="submit" class="secundario" style="width:100%;margin-top:0.75rem">Guardar como escenario base</button>
+  </form>
+  {% include "finanzas/_proyeccion.html" %}
+</section>
+
+<section aria-labelledby="t-metas">
+  <div class="cabecera" style="margin:2rem 0 0.75rem"><h2 id="t-metas" style="margin:0">Metas</h2><a class="secundario" href="/metas">Foto y metas</a></div>
+  <div class="tarjeta">
+    {% for m in metas %}{{ barra_meta(m) }}{% else %}<p class="vacio">Aún no hay metas.</p>{% endfor %}
+    <p class="tenue" style="margin-top:0.75rem">{% if foto %}Según la foto del {{ foto.fecha|fecha_corta }}.{% else %}Sin foto mensual todavía.{% endif %} <a href="/fotos/nueva">Nueva foto</a></p>
+  </div>
+</section>
+
+<section aria-labelledby="t-fondos">
+  <div class="cabecera" style="margin:2rem 0 0.75rem"><h2 id="t-fondos" style="margin:0">Fondos de previsión</h2><a class="secundario" href="/fondos/nuevo">Nuevo fondo</a></div>
+  <div class="tarjeta">
+    {% for x in fondos %}{% include "finanzas/_fondo_fila.html" %}{% else %}<p class="vacio">Sin fondos todavía.</p>{% endfor %}
+  </div>
+</section>
+
+<section aria-labelledby="t-eventos">
+  <div class="cabecera" style="margin:2rem 0 0.75rem"><h2 id="t-eventos" style="margin:0">Eventos conocidos</h2><a class="secundario" href="/eventos/nuevo">Nuevo evento</a></div>
+  <div class="tarjeta">
+    {% if eventos %}
+    <ul class="filas">
+      {% for ev in eventos %}
+      <li>
+        <a class="fila nombre" href="/eventos/{{ ev.id }}"><span>{{ ev.nombre }} {% if ev.estimado %}{{ estimado() }}{% endif %}</span>
+          <small>{{ ev.fecha|fecha_corta }} · {{ ev.tipo }}{% if ev.deuda %} · a {{ ev.deuda }}{% elif ev.fondo %} · fondo {{ ev.fondo }}{% endif %}{% if ev.escenario == "extra" %} · solo si cuentas con el extra{% endif %}</small></a>
+        <span class="monto cifra">{% if ev.monto is none %}<span class="tenue">sin dato</span>{% else %}{{ "+" if ev.tipo == "ingreso" else ("a fondo " if ev.tipo == "traslado" else "-") }}{{ ev.monto|cop }}{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vacio">Sin eventos. Agrega primas, cesantías o viajes.</p>{% endif %}
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+window.dibujarProyeccion = function () {
+  var el = document.getElementById("grafica-proyeccion");
+  if (!el || !window.echarts) return;
+  var datos = JSON.parse(el.dataset.serie || "[]"), meta1 = +el.dataset.meta1, m4 = +el.dataset.m4;
+  var incap = JSON.parse(el.dataset.incapacidad || "[]");
+  var css = getComputedStyle(document.documentElement), v = function (n) { return css.getPropertyValue(n).trim(); };
+  var meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  var etiqueta = function (k) { return meses[+k.slice(5) - 1] + " " + k.slice(2, 4); };
+  var fmt = function (n) { return (n < 0 ? "-" : "") + Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); };
+  var corto = function (n) { var a = Math.abs(n); return (n < 0 ? "-" : "") + (a >= 1e6 ? (a / 1e6).toFixed(0) + " M" : fmt(a)); };
+  var g = echarts.getInstanceByDom(el) || echarts.init(el, null, { renderer: "svg" });
+  var lineas = [];
+  if (meta1) lineas.push({ yAxis: meta1, name: "Meta 1" });
+  if (m4) lineas.push({ yAxis: m4, name: "M4" });
+  var bandas = incap.length ? [[{ xAxis: etiqueta(incap[0]) }, { xAxis: etiqueta(incap[incap.length - 1]) }]] : [];
+  var serie = function (nombre, campo, color, extra) {
+    return Object.assign({ name: nombre, type: "line", data: datos.map(function (d) { return d[campo]; }),
+      showSymbol: false, lineStyle: { width: 2, color: color }, itemStyle: { color: color } }, extra || {});
+  };
+  g.setOption({
+    animation: !matchMedia("(prefers-reduced-motion: reduce)").matches,
+    grid: { left: 8, right: 40, top: el.clientWidth < 480 ? 64 : 36, bottom: 8, containLabel: true },
+    legend: { top: 0, left: 0, itemWidth: 14, textStyle: { color: v("--tinta-suave"), fontFamily: "Geist" } },
+    tooltip: { trigger: "axis", backgroundColor: v("--superficie-alta"), borderColor: v("--linea"),
+      textStyle: { color: v("--tinta"), fontFamily: "Geist" }, valueFormatter: fmt,
+      formatter: function (ps) {
+        var d = datos[ps[0].dataIndex], t = d.mes + "<br>" + ps.map(function (p) { return p.marker + p.seriesName + ": " + fmt(p.value); }).join("<br>");
+        return d.eventos.length ? t + "<br>" + d.eventos.join(", ") : t;
+      } },
+    xAxis: { type: "category", data: datos.map(function (d) { return etiqueta(d.mes); }), boundaryGap: false,
+      axisLine: { lineStyle: { color: v("--linea") } }, axisTick: { show: false },
+      axisLabel: { color: v("--tinta-tenue"), fontFamily: "Geist", hideOverlap: true } },
+    yAxis: { type: "value", splitLine: { lineStyle: { color: v("--linea") } },
+      axisLabel: { color: v("--tinta-tenue"), fontFamily: "Geist", formatter: corto } },
+    series: [
+      serie("Patrimonio", "patrimonio", v("--tinta"), {
+        markLine: { silent: true, symbol: "none", lineStyle: { color: v("--tinta-tenue"), type: "dashed", width: 1 },
+          label: { color: v("--tinta-tenue"), fontFamily: "Geist", formatter: "{b}", position: "insideEndTop" }, data: lineas },
+        markArea: { silent: true, itemStyle: { color: v("--negativo"), opacity: 0.08 }, data: bandas } }),
+      serie("Fondo de emergencia", "emergencia", v("--b-ahorro")),
+      serie("Deuda total", "deuda", v("--b-deuda")),
+      serie("Inversión largo plazo", "inversion", v("--b-fijo"), { lineStyle: { width: 2, color: v("--b-fijo"), type: "dashed" } })
+    ]
+  }, true);
+  if (!el.dataset.escucha) { el.dataset.escucha = "1"; addEventListener("resize", function () { g.resize(); }); }
+};
+document.addEventListener("DOMContentLoaded", window.dibujarProyeccion);
+document.addEventListener("htmx:afterSettle", window.dibujarProyeccion);
+</script>
+{% endblock %}

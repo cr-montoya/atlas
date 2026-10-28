@@ -1,0 +1,110 @@
+{% from "_iconos.html" import icono %}
+{% if b %}
+{% set bid = b.bloque.id %}
+<article class="tarjeta bloque-combate" id="bl-{{ bid }}">
+  <header class="ejercicio-cab">
+    <h3>{{ b.nombre }}</h3>
+    <span class="cifra suave">{% if b.bloque.duracion_s %}{{ b.bloque.duracion_s|duracion }}{% endif %}</span>
+    <form method="post" action="/rendimiento/bloques/{{ bid }}/borrar"
+          hx-post="/rendimiento/bloques/{{ bid }}/borrar" hx-target="#bl-{{ bid }}" hx-swap="outerHTML"
+          {% if b.entradas %}hx-confirm="¿Quitar el bloque de {{ b.nombre|lower }} con lo que registraste en él?"{% endif %}>
+      <button type="submit" class="icono-btn" aria-label="Quitar el bloque de {{ b.nombre|lower }}">{{ icono("x", 20) }}</button>
+    </form>
+  </header>
+  {% if error_bloque and error_id == bid %}<p class="error" role="alert">{{ error_bloque }}</p>{% endif %}
+
+  <form method="post" action="/rendimiento/bloques/{{ bid }}" class="bloque-datos"
+        hx-post="/rendimiento/bloques/{{ bid }}" hx-trigger="change" hx-target="#bl-{{ bid }}" hx-swap="outerHTML">
+    <div class="dos">
+      <div>
+        <label for="min-{{ bid }}">Minutos</label>
+        <input id="min-{{ bid }}" name="duracion_min" inputmode="numeric" class="cifra" autocomplete="off"
+               value="{{ ((b.bloque.duracion_s or 0) / 60)|round|int if b.bloque.duracion_s else '' }}">
+      </div>
+      {% if b.con_resultado %}
+      <div>
+        <label for="rounds-{{ bid }}">Rounds</label>
+        <input id="rounds-{{ bid }}" name="rounds" inputmode="numeric" class="cifra" autocomplete="off" value="{{ b.bloque.rounds or '' }}">
+      </div>
+      {% endif %}
+    </div>
+    {% if b.con_resultado %}
+    <fieldset>
+      <legend>Rival</legend>
+      <div class="chips-check">
+        {% for r in RIVALES %}
+        <label><input type="checkbox" name="rival" value="{{ r }}" {% if r in b.rivales %}checked{% endif %}><span>{{ r|capitalize }}</span></label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    {% endif %}
+    <noscript><button type="submit" class="secundario">Guardar bloque</button></noscript>
+  </form>
+
+  {% if b.entradas %}
+  <ul class="entradas">
+    {% for en in b.entradas %}
+    <li class="entrada resultado-{{ en.resultado }}">
+      <div class="entrada-cab">
+        <span class="entrada-nombre">
+          {% if en.tecnica %}{{ en.tecnica }}<small>{{ en.familia }}</small>
+          {% elif en.situacion %}{{ SITUACIONES[en.situacion] }}<small>situación</small>
+          {% else %}{{ en.detalle }}<small>nota</small>{% endif %}
+        </span>
+        <form method="post" action="/rendimiento/entradas/{{ en.id }}/borrar"
+              hx-post="/rendimiento/entradas/{{ en.id }}/borrar" hx-target="#bl-{{ bid }}" hx-swap="outerHTML">
+          <button type="submit" class="icono-btn" aria-label="Quitar {{ en.tecnica or SITUACIONES.get(en.situacion) or en.detalle }}">{{ icono("x", 18) }}</button>
+        </form>
+      </div>
+      {% if b.con_resultado %}
+      <form method="post" action="/rendimiento/entradas/{{ en.id }}" class="entrada-resultado"
+            hx-post="/rendimiento/entradas/{{ en.id }}" hx-trigger="change" hx-target="#bl-{{ bid }}" hx-swap="outerHTML">
+        <div class="segmentos resultado" role="radiogroup" aria-label="Resultado">
+          {% for k, v in RESULTADOS.items() %}
+          <label class="r-{{ k }}"><input type="radio" name="resultado" value="{{ k }}" {% if en.resultado == k %}checked{% endif %}><span>{{ v }}</span></label>
+          {% endfor %}
+        </div>
+        {% if en.tecnica or en.situacion %}
+        <input name="detalle" value="{{ en.detalle or '' }}" placeholder="Detalle (opcional): contra quién, cómo…" autocomplete="off"
+               aria-label="Detalle de {{ en.tecnica or SITUACIONES[en.situacion] }}">
+        {% endif %}
+        <noscript><button type="submit" class="secundario">Guardar</button></noscript>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <div class="agregar-tecnica">
+    <label for="buscar-{{ bid }}">Técnica</label>
+    <input type="search" id="buscar-{{ bid }}" name="q" autocomplete="off"
+           placeholder="{% if s.disciplina == 'bjj' %}Buscar: armbar, De la Riva…{% elif s.disciplina == 'muaythai' %}Buscar: teep, codo, clinch…{% else %}Buscar: uchi mata, kumikata…{% endif %}"
+           hx-get="/rendimiento/bloques/{{ bid }}/tecnicas" hx-trigger="input changed delay:150ms, search" hx-target="#res-{{ bid }}">
+    <div id="res-{{ bid }}" class="resultados-tecnica">
+      {% with lista=recientes, texto="", bloque_id=bid %}{% include "rendimiento/_tecnicas.html" %}{% endwith %}
+    </div>
+    <noscript>
+      <form method="post" action="/rendimiento/bloques/{{ bid }}/entradas">
+        <select name="tecnica_id">{% for t in catalogo %}<option value="{{ t.id }}">{{ t.nombre }} ({{ t.familia }})</option>{% endfor %}</select>
+        <button type="submit" class="secundario">Agregar técnica</button>
+      </form>
+    </noscript>
+  </div>
+
+  <form method="post" action="/rendimiento/bloques/{{ bid }}/entradas" class="situaciones"
+        hx-post="/rendimiento/bloques/{{ bid }}/entradas" hx-target="#bl-{{ bid }}" hx-swap="outerHTML">
+    <p class="etiqueta-bloque">Situación</p>
+    <div class="chips-botones">
+      {% for k, v in SITUACIONES.items() %}
+      <button type="submit" name="situacion" value="{{ k }}" class="chip">{{ v }}</button>
+      {% endfor %}
+    </div>
+  </form>
+</article>
+{% else %}
+<div id="bl-{{ bloque_id }}" hidden></div>
+{% endif %}
+{% if oob %}
+<p id="total-sesion" class="total-sesion" hx-swap-oob="true" aria-live="polite">Tiempo en bloques <b class="cifra">{{ duracion_s|duracion if duracion_s else "sin dato" }}</b></p>
+{% endif %}

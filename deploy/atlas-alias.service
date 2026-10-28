@@ -1,0 +1,14 @@
+# Servicio de usuario: publica atlas.local por mDNS (avahi) con la IP actual del portátil.
+# Necesita el paquete avahi-utils. Instalar con: make install-service
+[Unit]
+Description=Alias mDNS atlas.local
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/Documents/finanzas-personales/deploy/publicar-alias.sh atlas.local
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% from "rendimiento/_anillos.html" import anillo, medidor %}
+{% block titulo %}Hoy{% endblock %}
+{% block ancho %} amplio{% endblock %}
+
+{% macro delta_chip(d, unidad="", escala="mil", texto="") -%}
+{%- if d -%}
+<span class="delta {{ d.clase }}">{% if d.valor != 0 %}{{ icono("arrow-up-right" if d.sube else "arrow-down-right", 14) }}{% endif %}{{ d|delta_txt(unidad, escala) }}{% if d.pct_mil is not none and d.valor != 0 %}<span class="pct">{{ d.signo }}{{ d.pct_mil|pct_delta }}</span>{% endif %}</span>
+<span class="tenue">{{ texto or ("frente a " ~ sp.semana[-3:]) }}</span>
+{%- else -%}<span class="tenue">sin semana anterior para comparar</span>{%- endif -%}
+{%- endmacro %}
+
+{% block contenido %}
+<div class="r hoy">
+<div class="cabecera r-cab">
+  <div><h1>Hoy</h1><p class="suave">{{ hoy|fecha_larga|capitalize }}, semana {{ sa.semana[-2:]|int }}</p></div>
+  <a class="contar-voz" role="button" href="/rendimiento/voz">{{ icono("microphone", 20) }}<span>Contar por voz</span></a>
+</div>
+{% include "rendimiento/_sync.html" %}
+{% if sentir.lineas %}
+<section class="aviso como-vienes" aria-labelledby="t-vienes">
+  <h2 id="t-vienes">{{ icono("heartbeat", 20, "c-muaythai") }} Cómo vienes</h2>
+  {% for l in sentir.lineas %}
+  <div class="linea-vienes">
+    <p><b>{{ l.cuando }}:</b> {{ l.texto }}</p>
+    {% if l.reloj %}<p class="tenue reloj-vienes">{{ l.reloj|join(" · ") }}</p>{% endif %}
+  </div>
+  {% endfor %}
+  <a class="enlace-tactil" href="/rendimiento/dia/{{ sentir.enlace }}">Ver o editar</a>
+</section>
+{% endif %}
+{% if not sentir.hay_hoy %}
+<div class="acceso-sentir">
+  <span>¿Cómo te sientes hoy?</span>
+  <a class="enlace-tactil" href="/rendimiento/sensaciones?volver=hoy">Escribir</a>
+  <a class="enlace-tactil" href="/rendimiento/voz">Contar por voz</a>
+</div>
+{% endif %}
+{% if competencia %}
+<a class="aviso aviso-enlace" href="/rendimiento/competencia">{{ icono("hand-fist", 20, "c-judo") }}<span>{{ competencia.nombre }}: pesaje {{ competencia.pesaje }}, torneo {{ competencia.torneo }}</span>{{ icono("arrow-up-right", 18) }}</a>
+{% endif %}
+{% if vinculos %}
+<section class="vinculos" id="vinculos" aria-label="Sesiones por cruzar con el reloj">
+  {% for v in vinculos %}
+  <div class="aviso vinculo-pendiente">
+    {{ icono("link", 20) }}
+    <div>
+      <p>{{ v.texto }}{% if v.candidatas|length == 1 %}{% set a = v.candidatas[0] %}: {{ a.deporte }} de {{ a.fuente|capitalize }} a las {{ a.hora[:5] }}, {{ a.duracion_s|duracion }}{% if a.fc_media %}, FC media {{ a.fc_media }}{% endif %}{% endif %}.</p>
+      {% if v.candidatas|length == 1 %}
+      <div class="acciones-vinculo">
+        <form method="post" action="/rendimiento/sesiones/{{ v.sesion.id }}/vincular"><input type="hidden" name="clave" value="{{ v.candidatas[0].clave }}"><button type="submit" class="secundario">Vincular</button></form>
+        <form method="post" action="/rendimiento/sesiones/{{ v.sesion.id }}/descartar-vinculo"><input type="hidden" name="clave" value="{{ v.candidatas[0].clave }}"><button type="submit" class="secundario">No es la misma</button></form>
+      </div>
+      {% else %}
+      <a class="enlace-tactil" href="/rendimiento/sesiones/{{ v.sesion.id }}">Elegir en la sesión</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% if por_confirmar %}
+<a class="aviso aviso-enlace" href="/rendimiento/confirmar">{{ icono("hand-fist", 20, "c-judo") }}<span>{{ por_confirmar }} sesion{{ "es" if por_confirmar != 1 }} de Polar por confirmar: ¿judo o BJJ?</span>{{ icono("arrow-up-right", 18) }}</a>
+{% endif %}
+
+<div class="mosaico">
+<section class="b-vistazo" aria-labelledby="t-vistazo"><h2 id="t-vistazo">De un vistazo</h2>
+  <div class="vistazo">
+    <article class="tarjeta t-dato">
+      <header>{{ icono("person-simple-run", 20, "c-cardio") }}<span>Minutos</span></header>
+      {{ anillo(minutos, "--r-cardio") }}
+      <footer>{{ delta_chip(delta_minutos, "", "s") }}</footer>
+    </article>
+    <article class="tarjeta t-dato">
+      <header>{{ icono("barbell", 20, "c-fuerza") }}<span>Carga total</span></header>
+      {% if carga.g is not none %}
+      <p class="cifra-tarjeta grande"><span data-contar="{{ carga.g }}" data-decimales="0">{{ (carga.g // 1000 * 1000)|decimal(0) }}</span><span class="unidad">kg</span></p>
+      <div class="barra-fina"><i style="--w:{{ ((carga.frac or 0) * 100)|round(1) }}%"></i></div>
+      <div class="par"><span><b class="cifra">{{ carga.sesiones }}</b><span class="tenue">{{ "sesiones" if carga.sesiones != 1 else "sesión" }}</span></span><span><b class="cifra">{{ carga.series }}</b><span class="tenue">series</span></span></div>
+      <footer>{{ delta_chip(carga.delta, "kg", "g") }}</footer>
+      {% else %}
+      <p class="vacio">Sin fuerza registrada esta semana.</p>
+      <footer><a class="enlace-tactil" href="/rendimiento/registrar">Registrar</a></footer>
+      {% endif %}
+    </article>
+    <article class="tarjeta t-dato">
+      <header>{{ icono("hand-fist", 20, "c-judo") }}<span>Combate</span></header>
+      {{ anillo(combate, "--r-judo") }}
+      <footer>
+        {% if por_disc_combate %}<span class="r-leyenda">{% for d, n in por_disc_combate.items() %}<span><i class="b-{{ {'Judo': 'judo', 'BJJ': 'bjj', 'Muay Thai': 'muaythai'}.get(d, 'duda') }}"></i>{{ d }} {{ n }}</span>{% endfor %}</span>
+        {% else %}<span class="tenue">Meta: 2 por semana</span>{% endif %}
+      </footer>
+    </article>
+    <article class="tarjeta t-dato">
+      <header>{{ icono("first-aid", 20, "c-otro") }}<span>Hombro</span></header>
+      {{ medidor(hombro.promedio_mil) }}
+      <footer>
+        {% if hombro.al_alza %}<span class="delta neg">{{ icono("arrow-up-right", 14) }}sube</span><span class="tenue">{{ hombro.aviso }}</span>
+        {% elif hombro.delta %}{{ delta_chip(hombro.delta, "", "mil") }}
+        {% else %}<span class="tenue">Registra la molestia al guardar cada sesión.</span>{% endif %}
+      </footer>
+    </article>
+  </div>
+</section>
+
+<section class="b-esenciales" aria-labelledby="t-es"><h2 id="t-es">Esenciales</h2>
+  <div class="esenciales tarjeta">
+    {% for nombre, color, a in esenciales %}
+    <div class="esencial">{{ anillo(a, color, 64, 5, "cifra-mini") }}<span class="etiqueta">{{ nombre }}</span></div>
+    {% endfor %}
+  </div>
+  {% if ventana_salud %}<p class="tenue">Promedio de los últimos 7 días con datos ({{ ventana_salud[0]|fecha_corta }} al {{ ventana_salud[1]|fecha_corta }}).</p>
+  {% else %}<p class="tenue">Sin datos de Garmin en los últimos 60 días. Sincroniza para traerlos.</p>{% endif %}
+</section>
+
+<section class="b-foco" aria-labelledby="t-foco"><h2 id="t-foco">En foco</h2>
+  <div class="foco" tabindex="0" aria-label="Gráficas en foco">
+    <article class="tarjeta t-foco">
+      <header><span>Tiempo por zona{% if graficas.zonas_estimadas %} <span class="tipo estimado">estimado</span>{% endif %}</span><span class="tenue">{{ sa.semana[-3:] }}</span></header>
+      {% if graficas.zonas %}
+      <p class="cifra-hero r-hero">{{ (graficas.zonas|sum) // 60 }}<span class="unidad">min</span></p>
+      <div id="g-zonas" class="grafica-foco" role="img" aria-label="Minutos por zona: {% for z in graficas.zonas %}Z{{ loop.index }} {{ z // 60 }}{% if not loop.last %}, {% endif %}{% endfor %}"></div>
+      <script type="application/json" id="g-zonas-datos">{{ graficas.zonas|tojson }}</script>
+      {% else %}<p class="vacio">Sin FC de los sensores esta semana.</p>{% endif %}
+    </article>
+    <article class="tarjeta t-foco">
+      <header><span>Molestia del hombro</span><span class="tenue">30 días</span></header>
+      {% if graficas.hombro %}
+      <p class="cifra-hero r-hero">{{ graficas.hombro[-1].v|decimal(1) }}<span class="unidad">de 10</span></p>
+      <div id="g-hombro" class="grafica-foco" role="img" aria-label="Molestia del hombro por día: {% for p in graficas.hombro %}{{ p.fecha }} {{ p.v|decimal(1) }}{% if not loop.last %}; {% endif %}{% endfor %}"></div>
+      <script type="application/json" id="g-hombro-datos">{{ graficas.hombro|tojson }}</script>
+      {% else %}<p class="vacio">Sin molestias registradas en 30 días.</p>{% endif %}
+    </article>
+  </div>
+  <div class="puntos" role="tablist" aria-label="Gráficas en foco">
+    <button type="button" class="punto-foco activo" role="tab" aria-selected="true" aria-label="Tiempo por zona" data-i="0"></button>
+    <button type="button" class="punto-foco" role="tab" aria-selected="false" aria-label="Molestia del hombro" data-i="1"></button>
+  </div>
+</section>
+
+<section class="b-cal" aria-labelledby="t-cal">
+  {% include "rendimiento/_calendario.html" %}
+</section>
+
+<section class="b-ayer" aria-labelledby="t-ayer"><h2 id="t-ayer">Ayer</h2>
+  <div class="tarjeta r-filas">
+    {% for e in entrenos_ayer %}
+    <div class="fila-dato"><span class="punto-disciplina b-{{ e.disciplina }}" aria-hidden="true"></span><span>{{ e.disciplina|disciplina }}</span>
+      <b class="cifra">{{ e.duracion_s|duracion }}{% if e.fc_media %} · FC {{ e.fc_media }}{% endif %}</b></div>
+    {% endfor %}
+    {% if salud_ayer %}
+    {% if salud_ayer.sueno_s %}<div class="fila-dato">{{ icono("moon-stars", 22, "c-bjj") }}<span>Sueño</span><b class="cifra">{{ salud_ayer.sueno_s|duracion }}</b></div>{% endif %}
+    {% if salud_ayer.fc_reposo %}<div class="fila-dato">{{ icono("heartbeat", 22, "c-muaythai") }}<span>FC en reposo</span><b class="cifra">{{ salud_ayer.fc_reposo }} lpm</b></div>{% endif %}
+    {% if salud_ayer.pasos is not none %}<div class="fila-dato">{{ icono("footprints", 22, "c-cardio") }}<span>Pasos</span><b class="cifra">{{ (salud_ayer.pasos * 1000)|decimal }}</b></div>{% endif %}
+    {% endif %}
+    {% if not entrenos_ayer and not salud_ayer %}<p class="vacio">Sin datos de ayer.</p>{% endif %}
+  </div>
+</section>
+
+<section class="b-hitos" aria-labelledby="t-hitos"><h2 id="t-hitos">Hitos</h2>
+  <div class="tarjeta r-filas">
+    {% for h in hitos %}
+    {% if h.enlace %}<a class="fila-hito fila-enlace{% if h.pasado %} apagada{% endif %}" href="{{ h.enlace }}"><span>{{ h.nombre }}<small class="tenue">{{ h.detalle }}</small></span><b class="cifra">{{ h.texto }}</b></a>
+    {% else %}<div class="fila-hito{% if h.pasado %} apagada{% endif %}"><span>{{ h.nombre }}<small class="tenue">{{ h.detalle }}</small></span><b class="cifra">{{ h.texto }}</b></div>{% endif %}
+    {% else %}<p class="vacio">Sin hitos en objetivos-deportivos.md.</p>{% endfor %}
+  </div>
+  {% if recomendacion %}
+  <div class="tarjeta recomendacion texto-ia">
+    <h3>Última recomendación de Claude</h3>
+    <p class="tenue">{{ recomendacion.que }}, analizada el {{ recomendacion.fin[:10]|fecha_corta }}.</p>
+    {{ recomendacion.texto|md_ia("ajustar", 4) }}
+    <p><a href="/rendimiento/ia/{{ recomendacion.id }}">Ver el análisis completo</a></p>
+  </div>
+  {% else %}
+  <div class="tarjeta recomendacion"><p class="vacio">Sin análisis de Claude todavía. <a href="/rendimiento/ia">Analiza tu semana</a>.</p></div>
+  {% endif %}
+</section>
+
+<section class="b-anio" aria-labelledby="t-anio"><h2 id="t-anio">{{ hoy.year }} <span class="tenue">{{ anio.total_min // 60 }} h entrenadas</span></h2>
+  <div class="tarjeta">
+    <svg class="anio" viewBox="0 0 795 122" role="img" aria-label="Minutos de entrenamiento por día en {{ hoy.year }}">
+      {% for m in anio.meses %}<text x="{{ m.x }}" y="10">{{ m.t }}</text>{% endfor %}
+      {% for c in anio.celdas %}<rect x="{{ c.x }}" y="{{ c.y }}" width="12" height="12" rx="3" class="{{ 'fuera' if c.fuera else ('vacio' if c.nivel == 0 else 'z' ~ c.nivel) }}"><title>{{ c.fecha }}: {{ c.min }} min</title></rect>{% endfor %}
+    </svg>
+  </div>
+</section>
+</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  Rendimiento.zonas("g-zonas");
+  Rendimiento.evolucion("g-hombro", { unidad: "de 10", direccion: "neutra", color: "--tinta" });
+  Rendimiento.animarEntrada();
+  Rendimiento.carrusel(".b-foco");
+</script>
+{% endblock %}

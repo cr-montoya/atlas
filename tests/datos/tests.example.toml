@@ -1,0 +1,28 @@
+# Ejemplo ficticio del archivo de carga de tests (el real va en data/tests.local.toml, fuera de git).
+[fuente]
+evaluador = "Centro ficticio"
+metodo_antropometria = "Matriz de ejemplo"
+
+[[evaluacion]]
+fecha = "2025-02-01"
+cmj_cm = "45,0"
+dinamometria_dom_kg = "40,0"
+peso_kg = "84,0"
+cintura_cm = "90"
+caminata_6min_km = "1,1"
+overhead_squat = "compensa con el tronco"
+
+[[evaluacion]]
+fecha = "2025-05-01"
+cmj_cm = "50,5"
+dinamometria_dom_kg = "44,5"
+peso_kg = "82,0"
+cintura_cm = "86"
+caminata_6min_km = "1,25"
+vmp_ms = { "15" = "1,9", "25" = "1,6", "35" = "1,5" }
+
+[[evaluacion]]
+fecha = "2025-09-01"
+cmj_cm = "52,0"
+dinamometria_dom_kg = "47,0"
+vmp_ms = { "15" = "1,8", "25" = "1,7", "35" = "1,55" }

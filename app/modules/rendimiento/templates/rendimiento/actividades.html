@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Actividades del reloj{% endblock %}
+{% block contenido %}
+<div class="r registro">
+<p><a href="/rendimiento/registrar">{{ icono("arrow-left", 18) }} Registrar</a></p>
+<h1>Actividades del reloj</h1>
+<p class="suave">Cardio, caminatas y todo lo que registraron Garmin y Polar. Toca una para agregar cómo te sentiste.</p>
+{% include "rendimiento/_sync.html" %}
+
+<div class="tarjeta r-filas actividades">
+  {% for a in lista %}
+  {% set n = notas.get(a.clave) %}
+  <a class="fila-actividad fila-enlace{% if not a.entrenamiento %} apagada{% endif %}" href="/rendimiento/actividad?clave={{ a.clave|urlencode }}">
+    <span class="punto-disciplina b-{{ a.disciplina }}" aria-hidden="true"></span>
+    <span class="info">
+      <span class="nombre">{{ a.nombre }}</span>
+      <small class="tenue">{{ a.fecha|fecha_corta }} · {{ a.hora[:5] }} · {{ a.fuente|capitalize }}{% if a.tambien_en %} y {{ a.tambien_en|capitalize }}{% endif %}</small>
+      {% if a.avisos or (n and n.sensaciones) or a.clave in vinculadas %}
+      <span class="etiquetas">
+        {% for av in a.avisos %}<span class="tipo estimado">{{ av }}</span>{% endfor %}
+        {% if n and n.sensaciones %}<span class="tipo">Sensaciones {{ n.sensaciones }}</span>{% endif %}
+        {% if a.clave in vinculadas %}<span class="tipo">{{ icono("link", 14) }} En una sesión</span>{% endif %}
+      </span>
+      {% endif %}
+    </span>
+    <span class="cifras"><b class="cifra">{{ a.duracion_s|duracion }}</b>{% if a.fc_media %}<small class="tenue">FC {{ a.fc_media }}</small>{% endif %}</span>
+  </a>
+  {% else %}
+  <p class="vacio">No hay actividades del reloj en el vault. Cuando sincronices Garmin y Polar aparecerán aquí.</p>
+  {% endfor %}
+</div>
+{% if not todas and lista|length >= 30 %}<p><a href="/rendimiento/actividades?todas=1">Ver todas</a></p>{% endif %}
+{% if avisos %}<ul class="avisos">{% for av in avisos %}<li>{{ av }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Más{% endblock %}
+{% block contenido %}
+<h1>Más</h1>
+<div class="tarjeta">
+  <ul class="filas">
+    <li><a class="fila nombre" href="/bolsillos"><span>Bolsillos y cuentas</span><small>Crear bolsillos y cuentas de la foto</small></a></li>
+    <li><a class="fila nombre" href="/plantillas/15"><span>Plantilla del 15</span><small>Líneas, montos y resto</small></a></li>
+    <li><a class="fila nombre" href="/plantillas/30"><span>Plantilla del 30</span><small>Líneas, montos y resto</small></a></li>
+    <li><a class="fila nombre" href="/revision"><span>Revisión del mes</span><small>Cinco preguntas para cerrar el mes</small></a></li>
+    <li><a class="fila nombre" href="/exportar"><span>Exportar resumen</span><small>Markdown mensual para el vault y resumen para IA</small></a></li>
+  </ul>
+</div>
+<div class="tarjeta">
+  <div class="acciones" style="margin:0">
+    <button type="button" class="secundario" id="tema">{{ icono("sun", 20) }}<span>Cambiar tema</span></button>
+    <form method="post" action="/salir" style="margin:0"><button type="submit" class="secundario">{{ icono("sign-out", 20) }}Salir</button></form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("tema").addEventListener("click", function () {
+  var r = document.documentElement, t = r.dataset.theme === "light" ? "dark" : "light";
+  r.dataset.theme = t;
+  try { localStorage.setItem("tema", t); } catch (e) {}
+  document.querySelector('meta[name="theme-color"]').content = t === "light" ? "#f7f1e8" : "#131211";
+});
+</script>
+{% endblock %}

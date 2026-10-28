@@ -1,0 +1,4 @@
+day,steps,resting_hr,stress_avg,body_battery_high,sleep_h,deep_min,light_min,rem_min,awake_min,sleep_score,hrv_ms,hrv_status,intensity_min,vigorous_min
+2026-02-02,8100,55,30,80,7.25,60,300,80,20,78,70,BALANCED,30,10
+2026-02-03,6400,56,35,70,6.5,50,280,70,25,70,66,BALANCED,20,5
+2026-02-04,9000,54,28,85,,,,,,,,NONE,0,0

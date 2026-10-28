@@ -1,0 +1,50 @@
+{% from "_iconos.html" import icono %}
+{# Cierre común de una sesión: vínculo con el reloj, molestia del hombro, notas y guardar. #}
+<form method="post" action="/rendimiento/sesiones/{{ s.id }}/guardar" class="cierre">
+  {% if vinculada %}
+  <p class="aviso vinculo">{{ icono("link", 20) }}<span>Vinculada con {{ vinculada.deporte }} de {{ vinculada.fuente|capitalize }} a las {{ vinculada.hora[:5] }}: {{ vinculada.duracion_s|duracion }}{% if vinculada.fc_media %}, FC media {{ vinculada.fc_media }}, máx {{ vinculada.fc_max }}{% endif %}.</span></p>
+  {% elif candidatas %}
+  <fieldset>
+    <legend>¿Es la misma sesión que registró tu reloj?</legend>
+    {% for a in candidatas %}
+    <label class="check"><input type="radio" name="vincular" value="{{ a.clave }}" {% if loop.first and candidatas|length == 1 %}checked{% endif %}>
+      Vincular con {{ a.deporte }} de {{ a.fuente|capitalize }} a las {{ a.hora[:5] }}: {{ a.duracion_s|duracion }}{% if a.fc_media %}, FC {{ a.fc_media }}{% endif %}</label>
+    {% endfor %}
+    <label class="check"><input type="radio" name="vincular" value="">No vincular</label>
+  </fieldset>
+  {% endif %}
+
+  <fieldset>
+    <legend>Molestia del hombro (opcional)</legend>
+    <div class="segmentos escala once">
+      {% for n in range(0, 11) %}
+      <label><input type="radio" name="molestia" value="{{ n }}" {% if s.molestia_hombro == n %}checked{% endif %}><span>{{ n }}</span></label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <details {% if s.notas or s.sensaciones or (s.duracion_s and not vinculada) %}open{% endif %}>
+    <summary>Duración, sensaciones y notas</summary>
+    {% if not vinculada %}
+    <label for="duracion">Duración (min)</label>
+    <input id="duracion" name="duracion_min" inputmode="decimal" class="cifra" autocomplete="off"
+           value="{{ ((s.duracion_s or 0) / 60)|round|int if s.duracion_s else '' }}">
+    {% endif %}
+    <fieldset>
+      <legend>Sensaciones</legend>
+      <div class="segmentos escala">
+        {% for n, t in [(1, "1 Mal"), (2, "2"), (3, "3 Normal"), (4, "4"), (5, "5 Muy bien")] %}
+        <label><input type="radio" name="sensaciones" value="{{ n }}" {% if s.sensaciones == n %}checked{% endif %}><span>{{ t }}</span></label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    <label for="notas">Notas</label>
+    <textarea id="notas" name="notas" rows="3">{{ s.notas or "" }}</textarea>
+  </details>
+  <div class="barra-accion"><button type="submit" class="primario">Guardar sesión</button></div>
+</form>
+
+{% if not s.guardada %}
+<form method="post" action="/rendimiento/sesiones/{{ s.id }}/borrar" class="descartar">
+  <button type="submit" class="fantasma" onclick="return confirm('¿Descartar esta sesión sin guardar?')">Descartar sesión</button>
+</form>
+{% endif %}

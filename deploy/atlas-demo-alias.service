@@ -1,0 +1,14 @@
+# Servicio de usuario: publica atlas-demo.local por mDNS (avahi) con la IP actual del portátil.
+# Necesita el paquete avahi-utils. Instalar con: make demo-install-service
+[Unit]
+Description=Alias mDNS atlas-demo.local
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/Documents/atlas-demo/deploy/publicar-alias.sh atlas-demo.local
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

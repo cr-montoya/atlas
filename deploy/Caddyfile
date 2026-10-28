@@ -1,0 +1,27 @@
+# /etc/caddy/Caddyfile
+# finanzas.local va por HTTP (un nombre .local no puede tener certificado público).
+# atlas.local va además por HTTPS con la CA interna de Caddy (tls internal): la cámara en vivo
+# de la guía de pose solo funciona con HTTPS. El celular debe confiar en la raíz de Caddy
+# (ver README, "HTTPS para atlas.local"). Por HTTP, atlas.local sigue funcionando sin cámara en vivo.
+# :80 sirve también por IP (http://192.168.1.50) como respaldo para celulares que no resuelven .local.
+# atlas-demo.local es la demo con datos ficticios (puerto 8010, solo HTTP); no entra en :80 ni en atlas.local.
+# El registro por voz recibe audios de hasta 10 MB (la app los corta ahí); Caddy pone un tope de 12 MB antes.
+(atlas) {
+	request_body /rendimiento/voz* {
+		max_size 12MB
+	}
+	reverse_proxy 127.0.0.1:8000
+}
+
+https://atlas.local {
+	tls internal
+	import atlas
+}
+
+http://finanzas.local, http://atlas.local, :80 {
+	import atlas
+}
+
+http://atlas-demo.local {
+	reverse_proxy 127.0.0.1:8010
+}

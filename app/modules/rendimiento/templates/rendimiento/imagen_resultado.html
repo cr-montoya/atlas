@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Imagen proyectada{% endblock %}
+{% block contenido %}
+<div class="r imagen-proy">
+<p><a class="volver" href="/rendimiento/imagen">{{ icono("arrow-left", 18) }} Imagen proyectada</a></p>
+<h1>{% if objetivo %}{{ objetivo|fecha_larga|capitalize }} de {{ objetivo.year }}{% else %}Imagen proyectada{% endif %}</h1>
+<p class="etiqueta-ia"><b>Ilustración generada por IA, no es una predicción.</b></p>
+{% if res.escenario %}<p class="suave">Escenario: {{ res.escenario|lower }}.</p>{% endif %}
+{% if res.aviso %}<p class="aviso-vault tenue" role="note">{{ res.aviso }}</p>{% endif %}
+
+{% include "rendimiento/_imagen_estado.html" %}
+
+{% for f in filas %}
+<section class="tarjeta pose-resultado" aria-labelledby="h-{{ f.r.pose }}">
+  <h2 id="h-{{ f.r.pose }}">{{ f.nombre }}</h2>
+  {% if f.r.estado == "lista" %}
+    {% if f.base and not f.lado_a_lado %}
+    <div>
+      <div class="antes-despues" data-ad style="--pos: 50%; aspect-ratio: {{ f.base.ancho }} / {{ f.base.alto }}">
+        <img class="ad-antes"{% if not loop.first %} loading="lazy"{% endif %} src="/rendimiento/fotos/{{ f.base.id }}/imagen" alt="{{ f.nombre }}, foto real del {{ f.base.fecha|fecha_corta }}" width="{{ f.base.ancho }}" height="{{ f.base.alto }}">
+        <img class="ad-despues"{% if not loop.first %} loading="lazy"{% endif %} src="/rendimiento/imagen/archivo/{{ f.r.id }}" alt="{{ f.nombre }}, ilustración generada por IA" width="{{ f.r.ancho }}" height="{{ f.r.alto }}">
+        <span class="ad-linea" aria-hidden="true"></span>
+        <span class="ad-etq izq">Foto real · {{ f.base.fecha|fecha_corta }}</span><span class="ad-etq der marca-ia">Ilustración IA</span>
+      </div>
+      <label for="ad-{{ f.r.pose }}" class="oculto">Comparar {{ f.nombre|lower }}: foto real e ilustración</label>
+      <input id="ad-{{ f.r.pose }}" class="ad-rango" type="range" min="0" max="100" value="50" data-texto="ilustración" aria-valuetext="50 % ilustración">
+    </div>
+    {% else %}
+    {% if f.base %}<p class="tenue">La ilustración cambió el encuadre; se muestran lado a lado.</p>{% else %}<p class="tenue">La foto base se borró.</p>{% endif %}
+    <div class="lado-a-lado{% if not f.base %} sola{% endif %}">
+      {% if f.base %}<figure><img src="/rendimiento/fotos/{{ f.base.id }}/imagen" alt="{{ f.nombre }}, foto real del {{ f.base.fecha|fecha_corta }}" width="{{ f.base.ancho }}" height="{{ f.base.alto }}"><figcaption class="tenue">Foto real · {{ f.base.fecha|fecha_corta }}</figcaption></figure>{% endif %}
+      <figure class="con-marca"><img src="/rendimiento/imagen/archivo/{{ f.r.id }}" alt="{{ f.nombre }}, ilustración generada por IA" width="{{ f.r.ancho }}" height="{{ f.r.alto }}"><span class="marca-ia">Ilustración IA</span><figcaption class="tenue">Ilustración</figcaption></figure>
+    </div>
+    {% endif %}
+    {% if f.r.verificacion == "exagerada" %}<p class="aviso" role="note">Más marcada de lo que indica el análisis{% if f.r.verificacion_nota %}: {{ f.r.verificacion_nota }}{% endif %}. No la tomes como referencia.</p>
+    {% elif f.r.verificacion == "dentro" %}<p class="tenue">Verificada: dentro de lo que indica el análisis.</p>
+    {% elif f.r.verificacion == "sin_verificar" %}<p class="tenue">No se pudo verificar.</p>{% endif %}
+    <p class="tenue registro-envio">{{ envio }}.</p>
+    <form method="post" action="/rendimiento/imagen/archivo/{{ f.r.id }}/borrar"><button type="submit" class="secundario" onclick="return confirm('¿Borrar esta ilustración? No se puede deshacer.')">{{ icono("trash", 18) }}<span>Borrar esta ilustración</span></button></form>
+  {% elif f.r.estado == "fallida" %}
+    <p class="aviso mal" role="alert">No se generó: {{ f.r.error }}</p>
+  {% else %}
+    <p class="tenue">Pendiente.</p>
+  {% endif %}
+</section>
+{% endfor %}
+
+{% if res.analisis %}
+<section class="tarjeta" aria-labelledby="h-analisis">
+  <h2 id="h-analisis">Análisis en el que se basa</h2>
+  <p class="tenue">Confianza {{ res.analisis.confianza }}. Máximo permitido para este horizonte: {{ PALABRA[res.techo] }}.</p>
+  <dl class="zonas-analisis">
+    {% for z, d in res.analisis.zonas.items() %}
+    <div><dt>{{ z|capitalize }}</dt><dd>{{ PALABRA[d.magnitud]|capitalize }}{% if d.direccion != "ninguna" %}, {{ PALABRA[d.direccion] }}{% endif %}{% if d.nota %}. <span class="tenue">{{ d.nota }}</span>{% endif %}</dd></div>
+    {% endfor %}
+  </dl>
+  {% if res.analisis.supuestos %}<h3>Supuestos</h3><ul>{% for s in res.analisis.supuestos %}<li>{{ s }}</li>{% endfor %}</ul>{% endif %}
+  {% if res.analisis.faltantes %}<h3>Lo que faltó</h3><ul>{% for s in res.analisis.faltantes %}<li>{{ s }}</li>{% endfor %}</ul>{% endif %}
+</section>
+{% endif %}
+
+{% if res.secciones %}
+<details class="tarjeta detalle-envio">
+  <summary>Lo que se envió</summary>
+  {% for titulo, lineas in res.secciones %}
+  <h3>{{ titulo }}</h3>
+  <ul>{% for l in lineas %}<li>{{ l }}</li>{% endfor %}</ul>
+  {% endfor %}
+</details>
+{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/fotos.js?v=3"></script>{% endblock %}

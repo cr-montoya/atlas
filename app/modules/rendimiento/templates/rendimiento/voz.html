@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Contar por voz{% endblock %}
+{% block contenido %}
+<div class="r voz">
+<p><a class="volver" href="/rendimiento/registrar">{{ icono("arrow-left", 18) }} Registrar</a></p>
+<h1>Contar por voz</h1>
+<p class="suave">Cuéntale a la app qué comiste, cómo entrenaste o cómo te sentiste. Te muestra un borrador para revisar; nada se guarda hasta que tocas Guardar. El audio se transcribe en el servidor de la casa y no se guarda.</p>
+
+{% if activa %}<p class="aviso" role="status">Estoy procesando un relato. <a href="/rendimiento/voz/{{ activa.id }}">Ver el progreso</a></p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}.</p>{% endif %}
+
+{% if demo %}
+<p class="aviso" role="note">{{ aviso_demo }}</p>
+{% else %}
+<section class="tarjeta grabadora" aria-labelledby="h-grabar" data-grabadora data-envio="/rendimiento/voz/audio">
+  <h2 id="h-grabar" class="oculto">Grabar</h2>
+  <button type="button" class="boton-grabar" data-grabar{% if activa %} disabled{% endif %}>{{ icono("microphone", 28) }}<span>Grabar</span></button>
+  <div class="grabando" data-grabando hidden>
+    <p class="contador-voz" aria-live="off"><span class="punto" aria-hidden="true"></span><span data-contador>0:00</span> <span class="tenue">de 3:00</span></p>
+    <div class="acciones-grabar">
+      <button type="button" data-detener>{{ icono("stop", 20) }}<span>Detener y enviar</span></button>
+      <button type="button" class="secundario" data-cancelar>Cancelar</button>
+    </div>
+  </div>
+  <p class="tenue estado-grabar" data-estado role="status" aria-live="polite"></p>
+  <p class="tenue sin-micro" data-sin-micro hidden>No hay micrófono disponible; escríbelo abajo.<span data-https hidden> El micrófono necesita la versión segura: <a data-enlace-https href="#">abre esta página con https</a>.</span></p>
+  <p class="tenue ejemplo-voz">Por ejemplo: «almorcé arroz con pollo a la una, llevo seis vasos de agua, y en la noche judo hora y media: técnica veinte minutos de uchi mata y randori cinco rounds». También cómo te sentiste: «dormí mal, como un dos, y me duele el cuello».</p>
+</section>
+
+<form method="post" action="/rendimiento/voz" class="tarjeta escribir-relato">
+  <label for="t-relato">O escríbelo</label>
+  <textarea id="t-relato" name="texto" rows="4" maxlength="{{ max_texto }}" placeholder="Qué comiste, cuánta agua llevas, qué entrenaste, cómo te sentiste…">{{ texto }}</textarea>
+  <button type="submit"{% if activa %} disabled{% endif %}>Enviar</button>
+</form>
+{% endif %}
+
+{% if historial %}
+<section aria-labelledby="h-hist"><h2 id="h-hist">Anteriores</h2>
+  <div class="tarjeta r-filas">
+    {% for h in historial %}
+    <a class="fila-enlace fila-menu" href="/rendimiento/voz/{{ h.e.id }}">{{ icono("microphone", 22, "c-cardio") }}<span>{{ h.e.creada[:16]|replace("T", " ") }}<small class="tenue">{{ {"transcribiendo": "transcribiendo", "interpretando": "entendiendo", "borrador": "borrador sin guardar", "guardada": "guardado", "fallida": "falló"}[h.e.estado] }}{% if h.fragmento %} · {{ h.fragmento }}{% endif %}</small></span>{{ icono("arrow-up-right", 18) }}</a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/voz.js?v=2"></script>{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Confirmar judo o BJJ{% endblock %}
+{% block contenido %}
+<div class="r registro">
+<p><a href="/rendimiento">{{ icono("arrow-left", 18) }} Hoy</a></p>
+<h1>¿Judo o BJJ?</h1>
+<p class="suave">Polar registra judo y BJJ con el mismo perfil. Mientras no lo confirmes, cada sesión se cuenta como la sugerida (martes y jueves BJJ, o lo que diga la nota de Polar).</p>
+{% if ok %}<p class="aviso bien" role="status">Confirmadas {{ ok }} sesion{{ "es" if ok != 1 }}.</p>{% endif %}
+
+{% if semanas_p %}
+<form method="post" action="/rendimiento/confirmar" class="cierre">
+  {% for semana, lista in semanas_p.items() %}
+  <h2>{{ etiquetas[semana] }}</h2>
+  <div class="tarjeta r-filas">
+    {% for a in lista %}
+    <fieldset class="fila-confirmar">
+      <legend>{{ a.fecha|fecha_larga|capitalize }}, {{ a.hora[:5] }}
+        <small class="tenue">{{ a.duracion_s|duracion }}{% if a.fc_media %} · FC {{ a.fc_media }}{% endif %}{% if a.nota %} · {{ a.nota }}{% endif %}</small></legend>
+      <div class="segmentos">
+        {% for k, v in [("judo", "Judo"), ("bjj", "BJJ")] %}
+        <label><input type="radio" name="d:{{ a.clave }}" value="{{ k }}" {% if a.disciplina == k %}checked{% endif %}><span><i class="punto-disciplina b-{{ k }}" aria-hidden="true"></i>{{ v }}</span></label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  <div class="barra-accion"><button type="submit" class="primario">Confirmar {{ total }} sesion{{ "es" if total != 1 }}</button></div>
+</form>
+{% else %}
+<div class="tarjeta"><p class="vacio">No hay sesiones por confirmar.</p></div>
+{% endif %}
+</div>
+{% endblock %}

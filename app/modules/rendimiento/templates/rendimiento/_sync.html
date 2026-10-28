@@ -1,0 +1,29 @@
+{% from "_iconos.html" import icono %}
+{% set corriendo = t and t.estado in ("en_cola", "corriendo") %}
+{% set ocupado_por = ocupado_por|default(none) %}
+<div id="sync" class="sync" {% if corriendo %}hx-get="/rendimiento/trabajos/{{ t.id }}" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+  <form method="post" action="/rendimiento/sincronizar" hx-post="/rendimiento/sincronizar" hx-target="#sync" hx-swap="outerHTML">
+    <button type="submit" class="secundario sync-btn" data-texto-envio="Sincronizando…" {% if corriendo %}disabled aria-busy="true"{% elif ocupado_por or demo %}disabled{% endif %}>
+      {{ icono("arrows-clockwise", 20, "girando" if corriendo else "") }}<span>{% if corriendo %}Sincronizando…{% else %}Sincronizar{% endif %}</span>
+    </button>
+  </form>
+  <p class="tenue sync-estado" role="status" aria-live="polite">
+    {% if demo %}No disponible en la demo: los datos del reloj son ficticios.
+    {% elif corriendo %}Trayendo lo nuevo de Garmin y Polar. Puede tardar unos minutos.
+    {% elif ocupado_por %}{% if ocupado_por.tipo == "imagen" %}Codex está generando la imagen proyectada{% else %}Claude está haciendo un análisis{% endif %}; podrás sincronizar cuando termine.
+    {% elif hace is none %}Nunca se ha sincronizado desde la app.
+    {% elif hace == 0 %}Última sincronización: hoy.
+    {% elif hace == 1 %}Última sincronización: ayer.
+    {% else %}Última sincronización: hace {{ hace }} días.{% endif %}
+    {% if ultima.garmin %}Datos hasta: Garmin {{ ultima.garmin|fecha_corta }}{% if ultima.polar %}, Polar {{ ultima.polar|fecha_corta }}{% endif %}.{% endif %}
+  </p>
+  {% if t and t.estado == "listo" and resultado %}
+  <p class="tenue">{% if resultado.dias_garmin is defined %}Llegaron {{ resultado.dias_garmin }} día{{ "s" if resultado.dias_garmin != 1 }} de Garmin{% endif %}{% if resultado.sesiones_polar is defined %} y {{ resultado.sesiones_polar }} sesion{{ "es" if resultado.sesiones_polar != 1 }} de Polar{% endif %}{% if resultado.archivos_nuevos %} en {{ resultado.archivos_nuevos|length }} archivo{{ "s" if resultado.archivos_nuevos|length != 1 }} nuevo{{ "s" if resultado.archivos_nuevos|length != 1 }}{% endif %}.</p>
+  {% endif %}
+  {% if polar_sin_auth %}
+  <p class="aviso" role="alert">Polar necesita autorización: abre una sesión de Claude Code en el vault y autoriza. Garmin se sincronizó igual.</p>
+  {% endif %}
+  {% if t and t.estado == "fallido" %}
+  <p class="aviso mal" role="alert">La sincronización falló: {{ t.error }}</p>
+  {% endif %}
+</div>

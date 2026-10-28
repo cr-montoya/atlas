@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Comparar semanas{% endblock %}
+{% block ancho %} amplio{% endblock %}
+{% block contenido %}
+<div class="r comparar">
+<p><a href="/rendimiento/analisis">{{ icono("arrow-left", 18) }} Análisis</a></p>
+<h1>Comparar semanas</h1>
+<p class="suave">Semana A frente a semana B. El color dice si mejoró solo en las métricas que tienen una dirección.</p>
+
+<form method="get" action="/rendimiento/comparar" class="dos selector-semanas">
+  {% for nombre, valor, etiqueta in [("a", a, "Semana A"), ("b", b, "Semana B")] %}
+  <div>
+    <label for="sem-{{ nombre }}">{{ etiqueta }}</label>
+    <select id="sem-{{ nombre }}" name="{{ nombre }}" onchange="this.form.requestSubmit()">
+      {% if valor not in opciones %}<option value="{{ valor }}" selected>{{ etiquetas[valor] }}</option>{% endif %}
+      {% for s in opciones %}<option value="{{ s }}" {% if s == valor %}selected{% endif %}>{{ etiquetas[s] }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endfor %}
+  <noscript><button type="submit" class="secundario">Comparar</button></noscript>
+</form>
+
+<div class="leyenda-ab" aria-hidden="true"><span><i class="barra-a"></i>A · {{ sa.etiqueta }}</span><span><i class="barra-b"></i>B · {{ sb.etiqueta }}</span></div>
+
+{% for grupo, metricas in grupos.items() %}
+<section class="grupo-metricas entra-r" aria-labelledby="g-{{ loop.index }}">
+  <h2 id="g-{{ loop.index }}">{{ grupo }}{% if grupo == "Tiempo por zona" and metricas[0].nota %} <span class="tipo estimado">estimado</span>{% endif %}</h2>
+  <div class="metricas">
+    {% for m in metricas %}
+    {% set d = m.delta %}
+    {% set tope = [m.a or 0, m.b or 0]|max %}
+    <article class="metrica">
+      <header><span class="nombre">{{ m.nombre }}</span>
+        <span class="delta {{ d.clase if d else 'neutro' }}">
+          {% if d %}{% if d.valor != 0 %}{{ icono("arrow-up-right" if d.sube else "arrow-down-right", 14) }}{% endif %}{{ d|delta_txt(m.unidad, m.escala) }}{% if d.pct_mil is not none and d.valor != 0 %}<span class="pct">{{ d.signo }}{{ d.pct_mil|pct_delta }}</span>{% endif %}
+          {% else %}<span class="tenue">sin dato</span>{% endif %}
+        </span>
+      </header>
+      <div class="pares">
+        <div class="par-fila"><span class="tenue">A</span>
+          <span class="barra-par"><i class="barra-a" style="width: {{ ((m.a or 0) * 100 / tope)|round(1) if tope else 0 }}%"></i></span>
+          <span class="cifra">{{ m.a|valor_metrica(m.escala, m.unidad) }}</span></div>
+        <div class="par-fila"><span class="tenue">B</span>
+          <span class="barra-par"><i class="barra-b" style="width: {{ ((m.b or 0) * 100 / tope)|round(1) if tope else 0 }}%"></i></span>
+          <span class="cifra">{{ m.b|valor_metrica(m.escala, m.unidad) }}</span></div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+
+<section class="grupo-metricas" aria-labelledby="g-combate">
+  <h2 id="g-combate">Combate</h2>
+  <div class="dos-col">
+    {% for sem, nombre in [(sa, "A"), (sb, "B")] %}
+    <div class="tarjeta">
+      <h3>Semana {{ nombre }}</h3>
+      {% if sem.tecnicas or sem.situaciones %}
+      <ul class="lista-conteo">
+        {% for t, n in sem.tecnicas.most_common(8) %}<li><span>{{ t }}</span><b class="cifra">{{ n }}</b></li>{% endfor %}
+        {% for t, n in sem.situaciones.most_common() %}<li><span>{{ t }} <small class="tenue">situación</small></span><b class="cifra">{{ n }}</b></li>{% endfor %}
+      </ul>
+      {% else %}<p class="vacio">Sin técnicas registradas.</p>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+{% if not sa.dias_salud or not sb.dias_salud %}
+<p class="tenue">Sueño, HRV, FC en reposo y pasos vienen de Garmin: {% if not sb.dias_salud %}la semana B no tiene datos{% else %}la semana A no tiene datos{% endif %}. Sincroniza en Registrar, Cardio.</p>
+{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script>Rendimiento.animarEntrada();</script>{% endblock %}

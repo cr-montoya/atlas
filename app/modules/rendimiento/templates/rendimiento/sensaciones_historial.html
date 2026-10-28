@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Cómo me sentí: 14 días{% endblock %}
+{% block ancho %} amplio{% endblock %}
+{% block contenido %}
+<div class="r sentir">
+<p><a class="volver" href="/rendimiento/mas">{{ icono("arrow-left", 18) }} Más</a></p>
+<h1>Cómo me sentí</h1>
+<p class="suave">Los últimos 14 días, con lo que registró el reloj al lado. Solo los datos; sin conclusiones.</p>
+<p><a role="button" class="secundario boton-sentir" href="/rendimiento/sensaciones?volver=historial">{{ icono("plus", 20) }}<span>Registrar hoy</span></a></p>
+
+<div class="historial-sentir">
+{% for x in dias %}
+{% set f = x.fila %}{% set s = x.salud %}
+<article class="tarjeta dia-sentir" aria-labelledby="h-{{ x.fecha }}">
+  <header class="cab-sentir">
+    <h2 id="h-{{ x.fecha }}"><a href="/rendimiento/dia/{{ x.fecha }}">{{ x.d|fecha_larga|capitalize }}</a></h2>
+    {% if f and x.editable %}<a class="enlace-tactil" href="/rendimiento/sensaciones?fecha={{ x.fecha }}&volver=historial">Editar</a>{% endif %}
+  </header>
+  {% if f %}
+  <ul class="escalas-sentir">
+    {% for k, nombre, corto, sentido in ESCALAS %}{% if f[k] is not none %}
+    <li class="{% if es_bajo(k, f[k]) %}baja{% endif %}"><b class="cifra">{{ f[k] }}</b> {{ corto }}{% if es_bajo(k, f[k]) %} <span class="marca-baja">{{ "alto" if k == "estres" else "baja" }}</span>{% endif %}</li>
+    {% endif %}{% endfor %}
+  </ul>
+  {% if f.sintomas or f.sintomas_otros %}<p>{% for c in f.sintomas %}{{ SINTOMAS[c] }}{% if not loop.last or f.sintomas_otros %}, {% endif %}{% endfor %}{{ f.sintomas_otros or "" }}</p>{% endif %}
+  {% if f.dolor %}<p>Dolor: {{ f.dolor }}</p>{% endif %}
+  {% if f.sin_entreno %}<p>{{ SIN_ENTRENO_TXT[f.sin_entreno]|capitalize }}</p>{% endif %}
+  {% else %}
+  <p class="tenue">Sin registro{% if x.editable %} · <a class="enlace-tactil" href="/rendimiento/sensaciones?fecha={{ x.fecha }}&volver=historial">Registrar</a>{% endif %}</p>
+  {% endif %}
+  {% if s %}
+  <dl class="reloj-sentir">
+    {% if s.sueno_s %}<div><dt>Sueño</dt><dd class="cifra">{{ fmt_sueno(s.sueno_s) }}</dd></div>{% endif %}
+    {% if s.hrv_ms %}<div><dt>HRV</dt><dd class="cifra">{{ s.hrv_ms }} ms{% if s.hrv_estado %} <span class="tenue">{{ HRV_ESTADOS[s.hrv_estado] }}</span>{% endif %}</dd></div>{% endif %}
+    {% if s.bb_cargado is not none or s.bb_min is not none %}<div><dt>Body Battery</dt><dd class="cifra">{% if s.bb_cargado is not none %}cargó {{ s.bb_cargado }}{% endif %}{% if s.bb_cargado is not none and s.bb_min is not none %}, {% endif %}{% if s.bb_min is not none %}mín. {{ s.bb_min }}{% endif %}</dd></div>{% endif %}
+    {% if s.fc_reposo %}<div><dt>FC reposo</dt><dd class="cifra">{{ s.fc_reposo }}</dd></div>{% endif %}
+    {% if s.estres is not none %}<div><dt>Estrés Garmin</dt><dd class="cifra">{{ s.estres }}</dd></div>{% endif %}
+  </dl>
+  {% endif %}
+  {% if x.sesiones %}
+  <p class="sesiones-sentir">{% for ses in x.sesiones %}<a class="enlace-tactil" href="/rendimiento/sesiones/{{ ses.id }}">{{ ses.disciplina|disciplina }}{% if ses.duracion_s %} · {{ ses.duracion_s|duracion }}{% endif %}</a>{% endfor %}</p>
+  {% endif %}
+</article>
+{% else %}
+<p class="vacio tarjeta">Sin registros ni datos del reloj en los últimos 14 días.</p>
+{% endfor %}
+</div>
+</div>
+{% endblock %}

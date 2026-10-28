@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titulo %}{{ ev.nombre if ev else "Nuevo evento" }}{% endblock %}
+{% block contenido %}
+{% set v = valores %}
+<p><a href="/futuro#t-eventos">Futuro</a></p>
+<h1>{{ ev.nombre if ev else "Nuevo evento" }}</h1>
+<p class="suave">Un ingreso, un gasto o plata que guardarás en un fondo (prima, cesantías, viaje). Si no sabes el monto, déjalo vacío.</p>
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+<form class="tarjeta" method="post" action="/eventos{% if ev %}/{{ ev.id }}{% endif %}">
+  <label for="ev-nombre">Nombre</label>
+  <input id="ev-nombre" name="nombre" type="text" required autocomplete="off" value="{{ v.get('nombre', ev.nombre if ev else '') }}" placeholder="Prima de diciembre">
+  <div class="dos">
+    <div><label for="ev-fecha">Fecha</label><input id="ev-fecha" name="fecha" type="date" required value="{{ v.get('fecha', ev.fecha if ev else '') }}"></div>
+    <div><label for="ev-monto">Monto</label><input id="ev-monto" name="monto" class="monto" type="text" inputmode="numeric" autocomplete="off" value="{{ v.get('monto', (ev.monto|cop) if ev and ev.monto is not none else '') }}" placeholder="Sin dato"></div>
+  </div>
+  {% set tsel = v.get('tipo', ev.tipo if ev else 'ingreso') %}
+  <fieldset><legend>Tipo</legend><div class="segmentos">
+    <label><input type="radio" name="tipo" value="ingreso" {% if tsel == "ingreso" %}checked{% endif %}><span>Ingreso</span></label>
+    <label><input type="radio" name="tipo" value="gasto" {% if tsel == "gasto" %}checked{% endif %}><span>Gasto</span></label>
+    <label><input type="radio" name="tipo" value="traslado" {% if tsel == "traslado" %}checked{% endif %}><span>A un fondo</span></label>
+  </div></fieldset>
+  <div class="dos">
+    <div><label for="ev-deuda">Va a una deuda</label>
+      <select id="ev-deuda" name="deuda_id"><option value="">Ninguna</option>{% for d in deudas %}<option value="{{ d.id }}" {% if (v.get('deuda_id') or (ev.deuda_id|string if ev and ev.deuda_id else '')) == d.id|string %}selected{% endif %}>{{ d.nombre }}</option>{% endfor %}</select></div>
+    <div><label for="ev-fondo">O a un fondo</label>
+      <select id="ev-fondo" name="fondo_id"><option value="">Ninguno</option>{% for f in fondos %}<option value="{{ f.id }}" {% if (v.get('fondo_id') or (ev.fondo_id|string if ev and ev.fondo_id else '')) == f.id|string %}selected{% endif %}>{{ f.nombre }}</option>{% endfor %}</select></div>
+  </div>
+  <label class="check"><input type="checkbox" name="estimado" value="1" {% if v.get('estimado') or (not v and (not ev or ev.estimado)) %}checked{% endif %}> El monto es estimado</label>
+  <label class="check"><input type="checkbox" name="solo_extra" value="1" {% if v.get('solo_extra') or (ev and ev.escenario == 'extra') %}checked{% endif %}> Solo cuando el escenario cuenta con el extra</label>
+  <label for="ev-nota">Nota (opcional)</label><input id="ev-nota" name="nota" type="text" autocomplete="off" value="{{ v.get('nota', ev.nota if ev else '') }}">
+  <button type="submit" class="secundario" style="width:100%">Guardar evento</button>
+</form>
+{% if ev %}
+<form method="post" action="/eventos/{{ ev.id }}/borrar"><button type="submit" class="fantasma" onclick="return confirm('¿Borrar el evento {{ ev.nombre }}?')">Borrar evento</button></form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block titulo %}Deudas{% endblock %}
+{% block contenido %}
+<div class="cabecera"><div><h1>Deudas</h1><p class="suave">Saldos y fecha estimada en cero.</p></div></div>
+<div class="tarjeta">
+  {% if estado %}
+  <ul class="filas">
+    {% for e in estado %}
+    <li>
+      <a class="fila nombre" href="/deudas/{{ e.deuda.id }}">
+        <span>{{ e.deuda.nombre }}</span>
+        <small>{% if e.deuda.saldo == 0 %}Pagada{% elif e.estimado %}En cero hacia el {{ e.estimado.fecha|fecha_corta }}, {{ e.estimado.quincenas }} {{ "quincena" if e.estimado.quincenas == 1 else "quincenas" }}{% if e.estimado.pocos_datos %} (pocos datos){% endif %}{% else %}Sin abonos en los últimos 60 días{% endif %}</small>
+      </a>
+      <span class="monto">
+        <span class="cifra">{{ e.deuda.saldo|moneda(e.deuda.moneda) }}{% if e.deuda.moneda == "USD" %} USD{% endif %}</span>
+        {% if e.deuda.moneda == "USD" and e.saldo_cop %}<small class="tenue cifra" style="display:block">≈ {{ e.saldo_cop|cop }} COP</small>{% endif %}
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="vacio">No hay deudas registradas.</p>
+  {% endif %}
+</div>
+
+<details class="tarjeta" {% if error %}open{% endif %}>
+  <summary>Agregar deuda</summary>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/deudas">
+    <label for="nombre">Nombre</label>
+    <input id="nombre" name="nombre" type="text" required autocomplete="off">
+    <div class="dos">
+      <div>
+        <label for="moneda">Moneda</label>
+        <select id="moneda" name="moneda"><option>COP</option><option>USD</option></select>
+      </div>
+      <div>
+        <label for="saldo">Saldo</label>
+        <input id="saldo" name="saldo" class="monto" type="text" inputmode="decimal" autocomplete="off" required>
+      </div>
+    </div>
+    <button type="submit" class="secundario" style="width:100%">Agregar deuda</button>
+  </form>
+</details>
+{% endblock %}

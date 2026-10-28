@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}{{ a.nombre }}{% endblock %}
+{% block contenido %}
+<div class="r registro">
+<p><a href="/rendimiento/actividades">{{ icono("arrow-left", 18) }} Actividades del reloj</a></p>
+<h1>{{ a.nombre }}</h1>
+<p class="suave">{{ a.fecha|fecha_larga|capitalize }} a las {{ a.hora[:5] }}, {{ a.fuente|capitalize }}{% if a.tambien_en %} (también en {{ a.tambien_en|capitalize }}; manda la FC del H10){% endif %}</p>
+{% if ok %}<p class="aviso bien" role="status">Guardado.</p>{% endif %}
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+
+<div class="tarjeta r-filas">
+  <div class="fila-dato"><span></span><span>Duración</span><b class="cifra">{{ a.duracion_s|duracion }}</b></div>
+  {% if a.distancia_m %}<div class="fila-dato"><span></span><span>Distancia</span><b class="cifra">{{ a.distancia_m|decimal }} km</b></div>{% endif %}
+  <div class="fila-dato"><span></span><span>FC media / máx</span><b class="cifra">{% if a.fc_media %}{{ a.fc_media }} / {{ a.fc_max }}{% else %}sin dato{% endif %}</b></div>
+  {% if a.kcal %}<div class="fila-dato"><span></span><span>kcal</span><b class="cifra">{{ a.kcal }}</b></div>{% endif %}
+</div>
+{% if a.avisos %}<ul class="avisos">{% for av in a.avisos %}<li>{{ av }}</li>{% endfor %}</ul>{% endif %}
+
+<form method="post" action="/rendimiento/actividad" class="cierre">
+  <input type="hidden" name="clave" value="{{ a.clave }}">
+  {% if not a.confirmada or (nota and nota.disciplina) or a.deporte != a.nombre %}
+  <fieldset>
+    <legend>{% if not a.confirmada %}¿Fue judo o BJJ?{% else %}Disciplina{% endif %}</legend>
+    {% if a.sugerencia %}<p class="tenue">Sugerencia: {{ "BJJ" if a.sugerencia == "bjj" else "Judo" }}{% if "bjj" in a.nota|lower %} (la nota de Polar dice BJJ){% endif %}.</p>{% endif %}
+    <div class="segmentos chips tres">
+      {% for k in (["judo", "bjj", "muaythai"] if a.disciplina in ("judo", "bjj", "muaythai") else DISCIPLINAS.keys()|list) %}
+      <label><input type="radio" name="disciplina" value="{{ k }}" {% if a.disciplina == k %}checked{% endif %}><span>{{ DISCIPLINAS[k] }}</span></label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  {% endif %}
+  {% if not a.entrenamiento or (nota and nota.es_entrenamiento is not none) %}
+  <fieldset>
+    <legend>¿Fue entrenamiento?</legend>
+    <div class="segmentos">
+      <label><input type="radio" name="es_entrenamiento" value="1" {% if a.entrenamiento %}checked{% endif %}><span>Sí, cuenta</span></label>
+      <label><input type="radio" name="es_entrenamiento" value="0" {% if not a.entrenamiento %}checked{% endif %}><span>No, ignorar</span></label>
+    </div>
+  </fieldset>
+  {% endif %}
+  <fieldset>
+    <legend>Sensaciones</legend>
+    <div class="segmentos escala">
+      {% for n, t in [(1, "1 Mal"), (2, "2"), (3, "3 Normal"), (4, "4"), (5, "5 Muy bien")] %}
+      <label><input type="radio" name="sensaciones" value="{{ n }}" {% if nota and nota.sensaciones == n %}checked{% endif %}><span>{{ t }}</span></label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Molestia del hombro (opcional)</legend>
+    <div class="segmentos escala once">
+      {% for n in range(0, 11) %}
+      <label><input type="radio" name="molestia" value="{{ n }}" {% if nota and nota.molestia_hombro == n %}checked{% endif %}><span>{{ n }}</span></label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <label for="notas">Notas</label>
+  <textarea id="notas" name="notas" rows="3">{{ nota.notas if nota and nota.notas else "" }}</textarea>
+  <div class="barra-accion"><button type="submit" class="primario">Guardar</button></div>
+</form>
+</div>
+{% endblock %}

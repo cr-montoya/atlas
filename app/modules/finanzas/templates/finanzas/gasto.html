@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block titulo %}Gasto rápido{% endblock %}
+{% block contenido %}
+<p><a href="/quincena">Quincena</a></p>
+<h1>Gasto rápido</h1>
+<p class="suave">Opcional. Para lo que no estaba en la plantilla.</p>
+{% if ok %}<p class="aviso bien" role="status">Gasto guardado.</p>{% endif %}
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="/gasto" class="gasto">
+  <input type="hidden" name="fecha" value="{{ valores.get('fecha', fecha) }}">
+  <label for="g-monto">Monto</label>
+  <input id="g-monto" name="monto" class="monto monto-grande" type="text" inputmode="numeric" autocomplete="off"
+         placeholder="48.000" value="{{ valores.get('monto', '') }}" autofocus required
+         {% if error %}aria-invalid="true"{% endif %}>
+  <fieldset>
+    <legend>Bolsillo</legend>
+    <div class="segmentos chips">
+      {% set bsel = valores.get('bolsillo_id', bolsillo_defecto|string) %}
+      {% for b in bolsillos %}
+      <label><input type="radio" name="bolsillo_id" value="{{ b.id }}" {% if b.id|string == bsel %}checked{% endif %}><span><span class="punto t-{{ b.tipo }}"></span> {{ b.nombre }}</span></label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Categoría</legend>
+    <div class="segmentos chips tres">
+      {% for c in categorias %}
+      <label><input type="radio" name="categoria_id" value="{{ c.id }}" {% if valores.get('categoria_id') == c.id|string %}checked{% endif %}><span>{{ c.nombre }}</span></label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <details {% if valores.get('nota') %}open{% endif %}>
+    <summary>Agregar nota</summary>
+    <label for="g-nota">Nota</label>
+    <input id="g-nota" name="nota" type="text" autocomplete="off" value="{{ valores.get('nota', '') }}">
+  </details>
+  <div class="barra-accion"><button type="submit" class="primario">Guardar gasto</button></div>
+</form>
+
+<section aria-labelledby="t-recientes">
+  <h2 id="t-recientes">Últimos 30 días</h2>
+  <div class="tarjeta">
+    {% if recientes %}
+    <ul class="filas">
+      {% for g in recientes %}
+      <li>
+        <span class="nombre"><span>{{ g.categoria or "Sin categoría" }}{% if g.nota %} · {{ g.nota }}{% endif %}</span>
+          <small><span class="punto t-{{ g.tipo }}"></span> {{ g.bolsillo }} · {{ g.fecha|fecha_corta }}</small></span>
+        <span class="monto cifra">{{ g.monto|cop }}</span>
+        <form method="post" action="/gastos/{{ g.id }}/borrar" style="margin:0">
+          <button type="submit" class="fantasma" aria-label="Borrar gasto de {{ g.monto|cop }} del {{ g.fecha }}"
+                  onclick="return confirm('¿Borrar este gasto de {{ g.monto|cop }}?')">Borrar</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vacio">Sin gastos rápidos todavía.</p>{% endif %}
+  </div>
+</section>
+{% endblock %}

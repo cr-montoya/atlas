@@ -1,0 +1,16 @@
+{% from "finanzas/_macros.html" import estimado %}
+{% set f = x.f %}
+<div class="meta">
+  <div class="cab"><a class="fila" href="/fondos/{{ f.id }}"><strong>{{ f.nombre }}</strong></a>{% if f.estimado %} {{ estimado() }}{% endif %}
+    <span class="cifra" style="margin-left:auto">{% if x.aporte_fijo or not x.estado.problema %}{{ f.acumulado|cop }}{% endif %}</span></div>
+  {% if x.aporte_fijo %}
+  <div class="riel"><span class="t-{{ f.tipo_bolsillo }}" style="width: 100%; background: var(--c)"></span></div>
+  <div class="tenue cifra">Aporte {{ f.aporte_mensual|cop }} cada 30{% if f.fecha_objetivo %} · devuelve el {{ f.fecha_objetivo|fecha_corta }}{% endif %} · no cuenta como colchón</div>
+  {% elif x.estado.problema %}
+  <div class="riel punteado"></div>
+  <div class="tenue">{{ x.estado.problema|capitalize }}. <a href="/fondos/{{ f.id }}">Completar</a></div>
+  {% else %}
+  <div class="riel" role="progressbar" aria-label="{{ f.nombre }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ x.pct }}"><span class="t-{{ f.tipo_bolsillo }}" style="width: {{ x.pct }}%; background: var(--c)"></span></div>
+  <div class="tenue cifra">{{ f.acumulado|cop }} de {{ f.objetivo|cop }} · {% if x.provision %}{{ x.provision|cop }} por quincena, {{ x.quincenas }} {{ "quincena" if x.quincenas == 1 else "quincenas" }} hasta el {{ f.fecha_objetivo|fecha_corta }}{% else %}completo{% endif %}</div>
+  {% endif %}
+</div>

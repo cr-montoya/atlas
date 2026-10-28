@@ -1,0 +1,39 @@
+{% from "_iconos.html" import icono %}
+<section class="tarjeta comida{% if c %} registrada{% endif %}" id="c-{{ clave }}" aria-labelledby="h-{{ clave }}">
+  <header class="comida-cab">
+    <h2 id="h-{{ clave }}">{{ nombre }}</h2>
+    {% if c %}<span class="estado-comida hecho">{{ icono("check", 16) }}{% if c.segun_plan %}Según el plan{% else %}Registrada{% endif %}{% if c.hora %} · {{ c.hora }}{% endif %}</span>
+    {% else %}<span class="tenue estado-comida">Sin registrar</span>{% endif %}
+  </header>
+  {% if mp %}<p class="tenue plan-momento">Plan: {{ mp.texto }}{% if mp.nota %} ({{ mp.nota }}){% endif %}</p>{% endif %}
+  {% if c and (c.texto or (c.texto_intercambios and not c.segun_plan)) %}
+  <p class="lo-registrado">{{ c.texto }}{% if c.texto and c.texto_intercambios and not c.segun_plan %} · {% endif %}{% if c.texto_intercambios and not c.segun_plan %}<span class="tenue">{{ c.texto_intercambios }}</span>{% endif %}</p>
+  {% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/rendimiento/comidas/{{ fecha }}/{{ clave }}" hx-post="/rendimiento/comidas/{{ fecha }}/{{ clave }}"
+        hx-target="#c-{{ clave }}" hx-swap="outerHTML">
+    {% if mp and not (c and c.segun_plan) %}
+    <button type="submit" name="accion" value="plan" class="secundario lo-del-plan">{{ icono("check", 18) }}<span>Lo del plan</span></button>
+    {% endif %}
+    <details class="editar-comida"{% if error or (not mp and not c) %} open{% endif %}>
+      <summary>{{ "Editar" if c else "Con mis palabras" }}</summary>
+      {% if mp and mp.ejemplo %}<p class="tenue ejemplo">Ejemplo del plan: {{ mp.ejemplo }}</p>{% endif %}
+      <label for="t-{{ clave }}">Qué comí y cuánto</label>
+      <textarea id="t-{{ clave }}" name="texto" rows="2" maxlength="500">{{ c.texto if c else '' }}</textarea>
+      <fieldset class="intercambios">
+        <legend>Intercambios <span class="tenue">(opcional)</span></legend>
+        {% for g in grupos %}
+        <label class="intercambio"><span>{{ g|capitalize }}</span>
+          <input type="number" name="i_{{ g }}" min="0" max="12" inputmode="numeric" class="cifra"
+                 value="{{ c.intercambios.get(g, '') if c else '' }}" placeholder="{{ plan_n.get(g, 0) }}"></label>
+        {% endfor %}
+      </fieldset>
+      <div class="comida-pie">
+        <div class="hora"><label for="h-{{ clave }}-hora">Hora</label>
+          <input id="h-{{ clave }}-hora" type="time" name="hora" value="{{ c.hora if c and c.hora else '' }}"></div>
+        <button type="submit" name="accion" value="guardar" class="secundario">Guardar</button>
+      </div>
+      {% if c %}<button type="submit" name="accion" value="borrar" class="borrar-comida">Quitar el registro</button>{% endif %}
+    </details>
+  </form>
+</section>

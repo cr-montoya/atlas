@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}{{ d|fecha_larga|capitalize }}{% endblock %}
+{% block ancho %} amplio{% endblock %}
+{% block contenido %}
+<div class="r dia-vista">
+<header class="cab-dia">
+  <div>
+    <h1>{{ d|fecha_larga|capitalize }}</h1>
+    {% if cuando %}<p class="suave">{{ cuando|capitalize }}</p>{% endif %}
+  </div>
+  <nav class="nav-dia" aria-label="Días">
+    {% if anterior %}<a class="icono-btn" href="/rendimiento/dia/{{ anterior }}" aria-label="Día anterior">{{ icono("arrow-left", 20) }}</a>
+    {% else %}<span class="icono-btn apagado" aria-hidden="true">{{ icono("arrow-left", 20) }}</span>{% endif %}
+    {% if siguiente %}<a class="icono-btn girado" href="/rendimiento/dia/{{ siguiente }}" aria-label="Día siguiente">{{ icono("arrow-left", 20) }}</a>
+    {% else %}<span class="icono-btn girado apagado" aria-hidden="true">{{ icono("arrow-left", 20) }}</span>{% endif %}
+  </nav>
+</header>
+<p><a class="enlace-tactil" href="/rendimiento/comparar?b={{ semana }}">Comparar esta semana {{ icono("arrow-up-right", 16) }}</a></p>
+
+{% if fila or editable %}
+<section class="tarjeta" aria-labelledby="h-sentir">
+  <header class="cab-sentir"><h2 id="h-sentir">Cómo me sentí</h2>
+    {% if fila and editable %}<a class="enlace-tactil" href="/rendimiento/sensaciones?fecha={{ fecha }}&volver=dia">Editar</a>{% endif %}</header>
+  {% if fila %}
+  <ul class="escalas-sentir">
+    {% for k, nombre, corto, sentido in ESCALAS %}{% if fila[k] is not none %}
+    <li class="{% if es_bajo(k, fila[k]) %}baja{% endif %}"><b class="cifra">{{ fila[k] }}</b> {{ corto }}{% if es_bajo(k, fila[k]) %} <span class="marca-baja">{{ "alto" if k == "estres" else "baja" }}</span>{% endif %}</li>
+    {% endif %}{% endfor %}
+  </ul>
+  {% if fila.sintomas or fila.sintomas_otros %}<p>{% for c in fila.sintomas %}{{ SINTOMAS[c] }}{% if not loop.last or fila.sintomas_otros %}, {% endif %}{% endfor %}{{ fila.sintomas_otros or "" }}</p>{% endif %}
+  {% if fila.dolor %}<p>Dolor: {{ fila.dolor }}</p>{% endif %}
+  {% if fila.sin_entreno %}<p>{{ SIN_ENTRENO_TXT[fila.sin_entreno]|capitalize }}</p>{% endif %}
+  {% if fila.notas %}<p class="tenue">{{ fila.notas }}</p>{% endif %}
+  {% if fila.relato %}<details class="relato-sentir"><summary>Lo que dijiste</summary>{% for l in fila.relato.splitlines() %}<p>«{{ l }}»</p>{% endfor %}</details>{% endif %}
+  {% else %}
+  <p><a role="button" class="secundario boton-sentir" href="/rendimiento/sensaciones?fecha={{ fecha }}&volver=dia">{{ icono("plus", 20) }}<span>Registrar cómo me sentí</span></a></p>
+  {% endif %}
+</section>
+{% endif %}
+
+<div class="dia-par">
+{% if entrenos or sueltas or editable %}
+<section class="tarjeta" aria-labelledby="h-entreno">
+  <h2 id="h-entreno">Entrenamiento</h2>
+  {% if entrenos or sueltas %}
+  <div class="r-filas filas-dia">
+    {% for e in entrenos %}{% set s = e.s %}
+    <a class="fila-dato fila-enlace" href="/rendimiento/sesiones/{{ s.id }}">
+      <span class="punto-disciplina b-{{ s.disciplina }}" aria-hidden="true"></span>
+      <span>{{ s.disciplina|disciplina }}{% if s.hora %} <small class="tenue">{{ s.hora }}</small>{% endif %}
+        <small class="tenue bloque-dia">{% if e.resumen %}{{ e.resumen }}{% endif %}{% if s.sensaciones %} · sensaciones {{ s.sensaciones }}/5{% endif %}{% if s.molestia_hombro is not none %} · hombro {{ s.molestia_hombro }}/10{% endif %}{% if e.reloj %} · {% if e.reloj.fc_media %}FC {{ e.reloj.fc_media }}, máx {{ e.reloj.fc_max }}{% else %}con el reloj{% endif %}{% endif %}</small>
+        {% if e.reloj and e.reloj.zonas_s %}<small class="tenue bloque-dia">{% for z in e.reloj.zonas_s %}Z{{ loop.index }} {{ z // 60 }} min{% if not loop.last %} · {% endif %}{% endfor %}</small>{% endif %}</span>
+      <b class="cifra">{% if s.duracion_s %}{{ s.duracion_s|duracion }}{% endif %}</b>
+    </a>
+    {% endfor %}
+    {% for a in sueltas %}
+    <a class="fila-dato fila-enlace" href="/rendimiento/actividad?clave={{ a.clave|urlencode }}">
+      <span class="punto-disciplina b-{{ a.disciplina }}" aria-hidden="true"></span>
+      <span>{{ a.nombre }} <small class="tenue">{{ a.fuente|capitalize }} · {{ a.hora[:5] }}</small>
+        {% if a.fc_media %}<small class="tenue bloque-dia">FC {{ a.fc_media }}{% if a.fc_max %}, máx {{ a.fc_max }}{% endif %}</small>{% endif %}</span>
+      <b class="cifra">{{ a.duracion_s|duracion }}</b>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}<p class="vacio">Sin entrenos registrados.</p>{% endif %}
+  {% if editable %}<p><a class="enlace-tactil" href="/rendimiento/registrar?fecha={{ fecha }}">Registrar una sesión de este día</a></p>{% endif %}
+</section>
+{% endif %}
+
+<section class="tarjeta" aria-labelledby="h-reloj">
+  <h2 id="h-reloj">Reloj</h2>
+  {% if salud %}{% set s = salud %}
+  <dl class="reloj-dia">
+    {% if s.sueno_s %}<div><dt>Sueño</dt><dd class="cifra">{{ fmt_sueno(s.sueno_s) }}{% if s.sueno_puntaje %} · puntaje {{ s.sueno_puntaje }}{% endif %}</dd></div>{% endif %}
+    {% if s.profundo_min is not none or s.ligero_min is not none or s.rem_min is not none %}<div><dt>Fases</dt><dd class="cifra">{% if s.profundo_min is not none %}profundo {{ s.profundo_min }} min{% endif %}{% if s.ligero_min is not none %} · ligero {{ s.ligero_min }}{% endif %}{% if s.rem_min is not none %} · REM {{ s.rem_min }}{% endif %}{% if s.despierto_min is not none %} · despierto {{ s.despierto_min }}{% endif %}</dd></div>{% endif %}
+    {% if s.hrv_ms %}<div><dt>HRV</dt><dd class="cifra">{{ s.hrv_ms }} ms{% if s.hrv_estado %}, {{ HRV_ESTADOS[s.hrv_estado] }}{% endif %}{% if s.hrv_base_baja and s.hrv_base_alta %} <span class="tenue">(tu rango: {{ s.hrv_base_baja }} a {{ s.hrv_base_alta }})</span>{% endif %}</dd></div>{% endif %}
+    {% if s.bb_max is not none or s.bb_min is not none or s.bb_cargado is not none or s.bb_gastado is not none %}
+    <div><dt>Body Battery</dt><dd class="cifra">{% set partes = [] %}{% if s.bb_max is not none %}{% set _ = partes.append("máximo " ~ s.bb_max) %}{% endif %}{% if s.bb_min is not none %}{% set _ = partes.append("mínimo " ~ s.bb_min) %}{% endif %}{% if s.bb_cargado is not none %}{% set _ = partes.append("cargó " ~ s.bb_cargado) %}{% endif %}{% if s.bb_gastado is not none %}{% set _ = partes.append("gastó " ~ s.bb_gastado) %}{% endif %}{{ partes|join(", ") }}</dd></div>
+    {% endif %}
+    {% if s.fc_reposo %}<div><dt>FC en reposo</dt><dd class="cifra">{{ s.fc_reposo }} lpm</dd></div>{% endif %}
+    {% if s.estres is not none %}<div><dt>Estrés promedio</dt><dd class="cifra">{{ s.estres }}</dd></div>{% endif %}
+    {% if s.pasos is not none %}<div><dt>Pasos</dt><dd class="cifra">{{ (s.pasos * 1000)|decimal }}</dd></div>{% endif %}
+  </dl>
+  {% else %}
+  <p class="vacio">El reloj no tiene datos de este día.{% if cuando %} Garmin trae hasta ayer.{% endif %}</p>
+  {% endif %}
+</section>
+</div>
+
+{% if comidas %}
+<section class="tarjeta" aria-labelledby="h-comidas">
+  <h2 id="h-comidas">Comidas</h2>
+  {% if plan %}<p class="tenue">Frente al plan actual.</p>{% endif %}
+  <div class="r-filas filas-dia">
+    {% for clave, nombre in MOMENTOS.items() %}{% set c = comidas.comidas.get(clave) %}{% set mp = plan.momento(clave) if plan else none %}
+    {% if c %}
+    <div class="fila-comida-dia">
+      <p><b>{{ nombre }}</b>{% if c.hora %} <span class="tenue">{{ c.hora }}</span>{% endif %}{% if c.segun_plan %} <span class="tenue">· según el plan</span>{% endif %}</p>
+      {% if c.texto or c.texto_intercambios %}<p>{{ c.texto }}{% if c.texto and c.texto_intercambios %} · {% endif %}<span class="tenue">{{ c.texto_intercambios }}</span></p>{% endif %}
+      {% if mp %}<p class="tenue">Plan: {{ mp.texto }}</p>{% endif %}
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% if comidas.agua_vasos is not none %}<p>Agua: <b class="cifra">{{ comidas.agua_vasos }} vasos</b> <span class="tenue">({{ comidas.agua_ml }} ml)</span></p>{% endif %}
+  {% if comidas.suplementos %}<p>Suplementos: {{ comidas.suplementos }}</p>{% endif %}
+  {% if comidas.notas %}<p class="tenue">{{ comidas.notas }}</p>{% endif %}
+  <p><a class="enlace-tactil" href="/rendimiento/comidas?fecha={{ fecha }}">Ver en Comidas</a></p>
+</section>
+{% endif %}
+
+{% if pesaje or peso_vault or fotos %}
+<section class="tarjeta" aria-labelledby="h-cuerpo">
+  <h2 id="h-cuerpo">Peso y cuerpo</h2>
+  {% if pesaje %}<p>Pesaje: <b class="cifra">{{ pesaje.peso_g|kg }}</b>{% if pesaje.hora %} <span class="tenue">a las {{ pesaje.hora }}</span>{% endif %}{% if pesaje.condicion %} <span class="tenue">· {{ {"ropa_interior": "en ropa interior", "con_ropa": "con ropa"}[pesaje.condicion] }}</span>{% endif %}</p>{% endif %}
+  {% for t, v in peso_vault %}<p>Peso del vault: <b class="cifra">{{ v.valor_mil|decimal(1) }} kg</b>{% if t.metodo %} <span class="tenue">· {{ t.metodo }}</span>{% endif %}</p>{% endfor %}
+  {% if fotos %}
+  <p class="tenue">Se ven borrosas hasta que las tocas.</p>
+  <ul class="galeria">
+    {% for f in fotos %}
+    <li>
+      <button type="button" class="miniatura" data-revelar aria-label="Mostrar la foto de {{ f.nombre_pose|lower }}" aria-pressed="false">
+        <img src="/rendimiento/fotos/{{ f.id }}/imagen?mini=1" alt="" width="{{ f.ancho }}" height="{{ f.alto }}" loading="lazy">
+      </button>
+      <div class="galeria-pie"><span>{{ f.nombre_pose }}</span></div>
+    </li>
+    {% endfor %}
+  </ul>
+  <p><a class="enlace-tactil" href="/rendimiento/fotos">Ver en Fotos</a></p>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if tests %}
+<section class="tarjeta" aria-labelledby="h-tests">
+  <h2 id="h-tests">Tests</h2>
+  <div class="r-filas filas-dia">
+    {% for m in tests %}
+    <a class="fila-dato fila-enlace" href="/rendimiento/tests">{{ icono("target", 22, "c-bjj") }}<span>{{ m.nombre }}{% if m.metodo %} <small class="tenue">{{ m.metodo }}</small>{% endif %}</span><b class="cifra">{{ m.valores|length }} medida{{ "s" if m.valores|length != 1 }}</b></a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if voz %}
+<section class="tarjeta" aria-labelledby="h-voz">
+  <h2 id="h-voz">Contado por voz</h2>
+  <div class="r-filas filas-dia">
+    {% for v in voz %}
+    <a class="fila-enlace fila-menu" href="/rendimiento/voz/{{ v.id }}">{{ icono("microphone", 22, "c-cardio") }}<span>{{ v.creada[11:16] }}<small class="tenue">{{ v.fragmento }}</small></span>{{ icono("arrow-up-right", 18) }}</a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}{% if fotos %}<script src="/static/fotos.js?v=1"></script>{% endif %}{% endblock %}

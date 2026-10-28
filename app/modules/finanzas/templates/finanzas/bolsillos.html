@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "finanzas/_macros.html" import tipo %}
+{% block titulo %}Bolsillos{% endblock %}
+{% block contenido %}
+<p><a href="/mas">Más</a></p>
+<h1>Bolsillos</h1>
+<p class="suave">Destinos del reparto. Aparecen en las plantillas y en cada quincena.</p>
+<div class="tarjeta">
+  <ul class="filas">
+    {% for b in bolsillos %}<li><span class="nombre">{{ b.nombre }}</span>{{ tipo(b.tipo) }}</li>{% else %}<li class="vacio">Sin bolsillos.</li>{% endfor %}
+  </ul>
+</div>
+<form class="tarjeta" method="post" action="/bolsillos">
+  <h2 style="margin-top:0">Nuevo bolsillo</h2>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <label for="b-nombre">Nombre</label>
+  <input id="b-nombre" name="nombre" type="text" required autocomplete="off">
+  <fieldset>
+    <legend>Tipo</legend>
+    <div class="segmentos">
+      {% for t in tipos %}<label><input type="radio" name="tipo" value="{{ t }}" {% if loop.first %}checked{% endif %}><span>{{ t }}</span></label>{% endfor %}
+    </div>
+  </fieldset>
+  <button type="submit" class="secundario" style="width:100%">Crear bolsillo</button>
+</form>
+
+<h2 id="cuentas">Cuentas</h2>
+<p class="suave">Las cuentas de la foto mensual (sin números de cuenta). El rendimiento E.A. hace crecer su saldo en la proyección.</p>
+{% if ok == "rendimiento" %}<p class="aviso bien" role="status">Rendimiento guardado.</p>{% endif %}
+<div class="tarjeta">
+  <ul class="filas">
+    {% for c in cuentas %}
+    <li style="flex-wrap:wrap">
+      <span class="nombre"><span>{{ c.nombre }}</span><small>{% if c.rendimiento_ea_ppm is not none %}{{ c.rendimiento_ea_ppm|pct }} % E.A.{% if c.rendimiento_nota %} · {{ c.rendimiento_nota }}{% endif %}{% else %}Rendimiento sin dato{% endif %}</small></span>
+      <details style="flex-basis:100%" {% if error_rend_id == c.id %}open{% endif %}>
+        <summary>Editar rendimiento de {{ c.nombre }}</summary>
+        {% if error_rend_id == c.id %}<p class="error" role="alert">{{ error_rend }}</p>{% endif %}
+        <form method="post" action="/cuentas/{{ c.id }}/rendimiento">
+          <div class="dos">
+            <div><label for="ea-{{ c.id }}">Rendimiento E.A. (%)</label>
+              <input id="ea-{{ c.id }}" name="ea" class="monto" type="text" inputmode="decimal" autocomplete="off" value="{{ c.rendimiento_ea_ppm|pct }}" placeholder="Sin dato"></div>
+            <div><label for="nota-{{ c.id }}">Nota</label>
+              <input id="nota-{{ c.id }}" name="nota" type="text" autocomplete="off" value="{{ c.rendimiento_nota }}" placeholder="variable, sin Fogafín"></div>
+          </div>
+          <button type="submit" class="secundario" style="width:100%">Guardar rendimiento</button>
+        </form>
+      </details>
+    </li>
+    {% else %}<li class="vacio">Sin cuentas.</li>{% endfor %}
+  </ul>
+</div>
+<form class="tarjeta" method="post" action="/cuentas">
+  {% if error_cuenta %}<p class="error" role="alert">{{ error_cuenta }}</p>{% endif %}
+  <label for="c-nombre">Nueva cuenta</label>
+  <input id="c-nombre" name="nombre" type="text" required autocomplete="off" placeholder="Nu">
+  <button type="submit" class="secundario" style="width:100%">Agregar cuenta</button>
+</form>
+{% endblock %}

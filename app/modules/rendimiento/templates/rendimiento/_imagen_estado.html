@@ -1,0 +1,15 @@
+{% from "_iconos.html" import icono %}
+<div id="estado-imagen" class="ia-estado" role="status" aria-live="polite" {% if corriendo %}hx-get="/rendimiento/imagen/{{ t.id }}/estado" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  {% if corriendo %}
+  <div class="tarjeta pensando">
+    {{ icono("arrows-clockwise", 22, "girando") }}
+    <div>
+      <p><b>Generando…</b> {{ progreso }}.</p>
+      <p class="tenue">Cada paso suele tardar de 1 a 5 minutos; puedes salir de esta pantalla y volver.</p>
+      <form method="post" action="/rendimiento/imagen/{{ t.id }}/cancelar"><button type="submit" class="secundario">Cancelar</button></form>
+    </div>
+  </div>
+  {% elif t.estado == "fallido" %}
+  <p class="aviso mal" role="alert">No se generó: {{ t.error }}</p>
+  {% endif %}
+</div>

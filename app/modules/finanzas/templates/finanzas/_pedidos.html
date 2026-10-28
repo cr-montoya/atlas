@@ -1,0 +1,7 @@
+<div id="pedidos">
+{% for l in pedidos %}
+  <label for="pedido_{{ l.plantilla_linea_id }}">{{ l.concepto }} (valor de este mes)</label>
+  <input id="pedido_{{ l.plantilla_linea_id }}" name="pedido_{{ l.plantilla_linea_id }}" class="monto" type="text"
+         inputmode="numeric" autocomplete="off" placeholder="1.200.000" required value="{{ pedidos_txt.get(l.plantilla_linea_id|string, '') }}">
+{% endfor %}
+</div>

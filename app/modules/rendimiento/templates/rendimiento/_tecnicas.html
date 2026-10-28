@@ -1,0 +1,13 @@
+{% if lista %}
+{% if not texto %}<p class="tenue resultados-titulo">Recientes</p>{% endif %}
+<div class="chips-botones">
+  {% for t in lista %}
+  <button type="button" class="chip" hx-post="/rendimiento/bloques/{{ bloque_id }}/entradas" hx-vals='{"tecnica_id": "{{ t.id }}"}'
+          hx-target="#bl-{{ bloque_id }}" hx-swap="outerHTML">{{ t.nombre }}<small>{{ t.familia }}</small></button>
+  {% endfor %}
+</div>
+{% elif texto %}
+<p class="tenue">Sin coincidencias para «{{ texto }}». Puedes agregarla al catálogo en Más.</p>
+{% else %}
+<p class="tenue">Escribe para buscar en el catálogo.</p>
+{% endif %}

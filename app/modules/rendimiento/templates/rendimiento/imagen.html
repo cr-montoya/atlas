@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Imagen proyectada{% endblock %}
+{% block contenido %}
+<div class="r imagen-proy">
+<p><a class="volver" href="/rendimiento/analisis">{{ icono("arrow-left", 18) }} Análisis</a></p>
+<h1>Imagen proyectada</h1>
+<p class="suave">Una ilustración de cómo te verías en una fecha, hecha por Codex a partir de tu foto real y tus datos. Es una ilustración, no una predicción: no muestra cifras.</p>
+
+{% if activo %}
+<p class="aviso" role="status">{{ "Ya hay una imagen generándose" if activo.tipo == "imagen" else "Hay otro trabajo corriendo" }}.{% if activo.tipo == "imagen" %} <a href="/rendimiento/imagen/{{ activo.id }}">Ver el progreso</a>{% else %} Podrás generar cuando termine.{% endif %}</p>
+{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}.</p>{% endif %}
+
+{% if demo %}<p class="aviso" role="note">{{ aviso_demo }}</p>{% endif %}
+<form method="post" action="/rendimiento/imagen" class="form-imagen">
+  <section class="tarjeta" aria-labelledby="h-fecha">
+    <h2 id="h-fecha">Fecha</h2>
+    <label for="i-fecha">Fecha objetivo <span class="tenue">(del {{ fecha_corta(min) }} al {{ fecha_corta(max) }})</span></label>
+    <input id="i-fecha" type="date" name="fecha" min="{{ min.isoformat() }}" max="{{ max.isoformat() }}" value="{{ fecha }}" required>
+    {% if atajos %}
+    <div class="chips-botones atajos" role="group" aria-label="Atajos">
+      {% for etq, d in atajos %}<a class="chip{% if fecha == d.isoformat() %} activo{% endif %}" href="/rendimiento/imagen?fecha={{ d.isoformat() }}&amp;escenario={{ escenario }}{% for p in elegidas %}&amp;poses={{ p }}{% endfor %}">{{ etq }}</a>{% endfor %}
+    </div>
+    {% endif %}
+    {% if prep and prep.horizonte.cortado %}<p class="aviso-vault tenue" role="note">{{ prep.horizonte.aviso }}</p>{% endif %}
+  </section>
+
+  <section class="tarjeta" aria-labelledby="h-esc">
+    <h2 id="h-esc">Escenario</h2>
+    <fieldset class="poses-imagen">
+      <legend class="oculto">Escenario</legend>
+      {% for k, (nombre, desc) in ESCENARIOS.items() %}
+      <div class="pose-fila"><label class="pose-check"><input type="radio" name="escenario" value="{{ k }}"{% if escenario == k %} checked{% endif %}>
+        <span>{{ nombre }}<small class="tenue">{{ desc|capitalize }}</small></span></label></div>
+      {% endfor %}
+    </fieldset>
+  </section>
+
+  <section class="tarjeta" aria-labelledby="h-poses">
+    <h2 id="h-poses">Poses</h2>
+    <fieldset class="poses-imagen">
+      <legend class="oculto">Poses</legend>
+      {% for e in estado %}
+      <div class="pose-fila">
+        {% if e.base %}
+        <label class="pose-check"><input type="checkbox" name="poses" value="{{ e.pose }}"{% if e.pose in elegidas %} checked{% endif %}>
+          <span>{{ e.nombre }}<small class="tenue">Foto base del {{ e.base.fecha|fecha_corta }}</small></span></label>
+        {% if e.vieja %}<p class="tenue nota-pose">Tu última foto de {{ e.nombre|lower }} es del {{ e.base.fecha|fecha_corta }} ({{ e.dias }} días). Para una ilustración más fiel, toma una nueva. <a href="/rendimiento/fotos/nueva?pose={{ e.pose }}">Tomar foto</a></p>{% endif %}
+        {% else %}
+        <label class="pose-check deshabilitada"><input type="checkbox" disabled><span>{{ e.nombre }}<small class="tenue">Sin foto</small></span></label>
+        <p class="nota-pose"><a href="/rendimiento/fotos/nueva?pose={{ e.pose }}">Toma una foto de {{ e.nombre|lower }}</a></p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </fieldset>
+  </section>
+
+  {% if prep %}
+  <section class="tarjeta" aria-labelledby="h-envio">
+    <h2 id="h-envio">Lo que se envía a OpenAI</h2>
+    <p class="tenue">Codex recibe estas fotos en varias llamadas: una de análisis y, por cada pose, una para la imagen y otra de verificación, que vuelve a enviar la foto base junto con la ilustración. Si la ilustración se pasa del análisis, la imagen y la verificación se repiten una vez.</p>
+    <ul class="lista-envio">
+      <li><b>Análisis:</b> {% for f, rol in prep.fotos_paso1 %}{{ rol }}{% if not loop.last %}; {% endif %}{% endfor %}.</li>
+      {% for p in prep.poses %}<li><b>{{ estado|selectattr("pose", "equalto", p)|map(attribute="nombre")|first }}:</b> solo la foto base del {{ prep.bases[p].fecha|fecha_corta }}.</li>{% endfor %}
+    </ul>
+    <details class="detalle-envio">
+      <summary>Ver los datos que se envían</summary>
+      {% for titulo, lineas in prep.secciones %}
+      <h3>{{ titulo }}</h3>
+      <ul>{% for l in lineas %}<li>{{ l }}</li>{% endfor %}</ul>
+      {% endfor %}
+    </details>
+    <label class="confirmar"><input type="checkbox" name="acepto" value="1" required> Acepto enviar estas fotos y datos a OpenAI (Codex) para generar la ilustración.</label>
+    <button type="submit"{% if activo or demo %} disabled{% endif %}>Generar</button>{% if demo %}<small class="no-demo">No disponible en la demo</small>{% endif %}
+  </section>
+  {% else %}
+  <button type="submit" class="secundario" formmethod="get" formaction="/rendimiento/imagen">Ver lo que se envía</button>
+  {% endif %}
+</form>
+
+{% if historial %}
+<section aria-labelledby="h-hist"><h2 id="h-hist">Anteriores</h2>
+  <div class="tarjeta r-filas">
+    {% for h in historial %}
+    <a class="fila-enlace fila-menu" href="/rendimiento/imagen/{{ h.t.id }}">{{ icono("person-simple-run", 22, "c-muaythai") }}<span>{{ h.objetivo|fecha_corta if h.objetivo else "Sin fecha" }}<small class="tenue">{{ h.poses|length }} pose{{ "s" if h.poses|length != 1 }}{% if h.escenario %} · {{ h.escenario|lower }}{% endif %} · {{ {"listo": "lista", "fallido": "falló", "corriendo": "generando", "en_cola": "en cola"}[h.t.estado] }}</small></span>{{ icono("arrow-up-right", 18) }}</a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+</div>
+{% endblock %}

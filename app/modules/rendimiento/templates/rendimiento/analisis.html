@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Análisis{% endblock %}
+{% block contenido %}
+<div class="r registro">
+<h1>Análisis</h1>
+<p class="suave">Compara, mira tus patrones y pídele a Claude una lectura de tus datos.</p>
+<div class="tarjeta r-filas menu-mas">
+  <a class="fila-enlace fila-menu" href="/rendimiento/comparar">{{ icono("arrows-left-right", 22, "c-cardio") }}<span>Comparar semanas<small class="tenue">Volumen, zonas, carga, recuperación y hombro</small></span>{{ icono("arrow-up-right", 18) }}</a>
+  <a class="fila-enlace fila-menu" href="/rendimiento/ia">{{ icono("chart-line-up", 22, "c-bjj") }}<span>Análisis con Claude<small class="tenue">{% if activo and activo.tipo not in ("sincronizar", "imagen") %}Pensando…{% elif ultimo %}Último: {{ ultimo.nombre|lower }}, {{ ultimo.t.fin[:10]|fecha_corta }}{% else %}Tu semana, tu combate y tus fotos{% endif %}</small></span>{{ icono("arrow-up-right", 18) }}</a>
+  <a class="fila-enlace fila-menu" href="/rendimiento/combate">{{ icono("hand-fist", 22, "c-judo") }}<span>Mi combate<small class="tenue">{% if combates %}{{ combates }} sesion{{ "es" if combates != 1 }} registrada{{ "s" if combates != 1 }}{% else %}Técnicas, qué funciona y situaciones{% endif %}</small></span>{{ icono("arrow-up-right", 18) }}</a>
+  <a class="fila-enlace fila-menu" href="/rendimiento/metas">{{ icono("target", 22, "c-muaythai") }}<span>Metas<small class="tenue">Pasos, líquidos, Muay Thai o BJJ y cuenta regresiva</small></span>{{ icono("arrow-up-right", 18) }}</a>
+  <a class="fila-enlace fila-menu" href="/rendimiento/comidas#semana">{{ icono("check-circle", 22, "c-bjj") }}<span>Nutrición<small class="tenue">Tu semana de comidas frente al plan</small></span>{{ icono("arrow-up-right", 18) }}</a>
+  <a class="fila-enlace fila-menu" href="/rendimiento/fotos">{{ icono("person-simple-run", 22, "c-fuerza") }}<span>Antes y después<small class="tenue">{% if fotos %}{{ fotos }} foto{{ "s" if fotos != 1 }}{% else %}Fotos por pose, deslizador y línea de tiempo{% endif %}</small></span>{{ icono("arrow-up-right", 18) }}</a>
+  <a class="fila-enlace fila-menu" href="/rendimiento/imagen">{{ icono("person-simple-run", 22, "c-muaythai") }}<span>Imagen proyectada<small class="tenue">{% if activo and activo.tipo == "imagen" %}Generando…{% else %}Ilustración con Codex para una fecha, con tus datos{% endif %}</small></span>{{ icono("arrow-up-right", 18) }}</a>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+.env
+data/*.db
+data/*.db-*
+data/seed.local.toml
+backups/
+.venv/
+__pycache__/
+node_modules/
+.pytest_cache/
+.impeccable/review/
+exports/
+data/tests.local.toml
+data/fotos/
+
+# Demo: lo generado por make demo-reset
+demo/datos/
+
+# Local, nunca al repo
+tests/prohibidas.local.txt
+data/*.json
+*.zip
+.claude/
+openspec/

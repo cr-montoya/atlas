@@ -1,0 +1,126 @@
+# Datos de ejemplo con montos FICTICIOS. Los reales van en data/seed.local.toml (ignorado por git).
+# Montos COP como texto con puntos de miles ("1.200.000"); USD con coma decimal ("850,00").
+# Monto de línea de plantilla: un valor fijo, "pedir" (se pide al aplicar) o "resto" (máximo una por plantilla).
+
+[[bolsillos]]
+nombre = "Casa"
+tipo = "fijo"
+
+[[bolsillos]]
+nombre = "Tarjeta Uno"
+tipo = "deuda"
+
+[[bolsillos]]
+nombre = "Ahorro"
+tipo = "ahorro"
+
+[[bolsillos]]
+nombre = "Libre"
+tipo = "libre"
+
+[[bolsillos]]
+nombre = "Fondos"
+tipo = "ahorro"
+
+[[deudas]]
+nombre = "Tarjeta USD"
+moneda = "USD"
+saldo = "850,00"
+tasa = "2"          # % mensual
+
+[[deudas]]
+nombre = "Crédito educativo"
+moneda = "COP"
+saldo = "5.000.000"
+cuota = "200.000"   # cuota mínima mensual; sin tasa = se proyecta sin intereses
+
+[[cuentas]]
+nombre = "Ahorros"
+
+[[cuentas]]
+nombre = "Cuenta nómina"
+rendimiento_ea = "5"
+rendimiento_nota = "ejemplo ficticio"
+
+[[metas]]
+nombre = "6 meses de básicos"
+objetivo = "10.000.000"
+cuentas = ["Ahorros"]
+
+[[plantillas]]
+nombre = "15"
+  [[plantillas.lineas]]
+  concepto = "Crédito educativo"
+  bolsillo = "Casa"
+  monto = "200.000"
+  deuda = "Crédito educativo"
+  [[plantillas.lineas]]
+  concepto = "Mercado"
+  bolsillo = "Casa"
+  monto = "500.000"
+  [[plantillas.lineas]]
+  concepto = "Ahorro"
+  bolsillo = "Ahorro"
+  monto = "300.000"
+  [[plantillas.lineas]]
+  concepto = "Libre"
+  bolsillo = "Libre"
+  monto = "resto"
+
+[[plantillas]]
+nombre = "30"
+  [[plantillas.lineas]]
+  concepto = "Mercado"
+  bolsillo = "Casa"
+  monto = "500.000"
+  [[plantillas.lineas]]
+  concepto = "Factura Tarjeta Uno"
+  bolsillo = "Tarjeta Uno"
+  monto = "pedir"
+  [[plantillas.lineas]]
+  concepto = "Ahorro"
+  bolsillo = "Ahorro"
+  monto = "300.000"
+  [[plantillas.lineas]]
+  concepto = "Libre"
+  bolsillo = "Libre"
+  monto = "resto"
+
+[[abonos]]
+deuda = "Crédito educativo"
+fecha = "2026-10-01"
+monto = "200.000"
+
+[[fotos]]
+fecha = "2026-10-01"
+trm = "4.000,00"
+cuentas = { "Ahorros" = "6.000.000", "Cuenta nómina" = "300.000" }
+deudas = { "Tarjeta USD" = "850,00", "Crédito educativo" = "5.000.000" }
+
+# ---------- v2 ----------
+[escenario]
+neto_quincena = "2.000.000"
+gasto_basico = "1.800.000"
+tarjeta_mes = "600.000"
+libre = "300.000"
+meta_m4 = "20.000.000"
+
+[[fondos]]
+nombre = "Seguro de la moto"
+objetivo = "300.000"
+fecha_objetivo = "2027-04-15"
+cada_meses = 12
+bolsillo = "Fondos"
+
+[[fondos]]
+nombre = "Regalos"
+objetivo = "0"
+bolsillo = "Fondos"
+estimado = true
+
+[[eventos]]
+nombre = "Prima de diciembre"
+fecha = "2026-12-15"
+tipo = "ingreso"
+monto = "1.000.000"
+estimado = true

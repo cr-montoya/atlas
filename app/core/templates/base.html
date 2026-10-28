@@ -1,0 +1,72 @@
+{% from "_iconos.html" import icono %}<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#131211">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block titulo %}{{ modulo_de(request.url.path).nombre }}{% endblock %} · Atlas</title>
+  <script>
+    try { var t = localStorage.getItem("tema"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+    if (document.documentElement.dataset.theme === "light") document.querySelector('meta[name="theme-color"]').content = "#f7f1e8";
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css" integrity="sha384-7P0NVe9LPDbUCAF+fH2R8Egwz1uqNH83Ns/bfJY0fN2XCDBMUI2S9gGzIOIRBKsA" crossorigin="anonymous">
+  <link rel="stylesheet" href="/static/app.css?v=16">
+  <script src="/static/graficas.js?v=1"></script>
+  {% if modulo_de(request.url.path).clave == "rendimiento" %}<link rel="stylesheet" href="/static/rendimiento.css?v=30"><script src="/static/rendimiento.js?v=9"></script>{% endif %}
+  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous" defer></script>
+  {% block cabeza %}{% endblock %}
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  {% block navegacion %}
+  {% set mod = modulo_de(request.url.path) %}
+  <header class="cabecera-atlas">
+    <a class="marca" href="{{ mod.inicio }}">Atlas</a>
+    <nav class="selector-modulo" aria-label="Módulo">
+      {% for m in modulos %}
+      <a href="{{ m.inicio }}" {% if m.clave == mod.clave %}aria-current="true"{% endif %}>{{ m.nombre }}</a>
+      {% endfor %}
+    </nav>
+    <nav class="barra" aria-label="{{ mod.nombre }}">
+      <ul>
+        {% for s in mod.secciones %}
+        <li><a href="{{ s.ruta }}" {% if seccion == s.clave %}aria-current="page"{% endif %}>{{ icono(s.icono) }}<span>{{ s.nombre }}</span></a></li>
+        {% endfor %}
+      </ul>
+    </nav>
+  </header>
+  {% endblock %}
+  {% if demo %}<p class="franja-demo" role="note">Demo con datos ficticios</p>{% endif %}
+  <main id="contenido" class="contenedor{% block ancho %}{% endblock %}">
+    {% block contenido %}{% endblock %}
+  </main>
+  <script>
+    // Evita doble envío (una quincena confirmada dos veces) y avisa si se sale con cambios sin guardar.
+    document.addEventListener("submit", function (ev) {
+      var f = ev.target, b = ev.submitter;
+      if (f.dataset.enviando) { ev.preventDefault(); return; }
+      f.dataset.enviando = "1";
+      delete document.body.dataset.cambios;
+      if (b) setTimeout(function () { b.dataset.texto = b.innerHTML; b.disabled = true; b.setAttribute("aria-busy", "true"); b.textContent = b.dataset.textoEnvio || "Guardando…"; });
+    });
+    // Un formulario de htmx que no se reemplaza con la respuesta queda listo para enviarse otra vez.
+    document.addEventListener("htmx:afterRequest", function (ev) {
+      var f = ev.detail.elt && ev.detail.elt.closest && ev.detail.elt.closest("form");
+      if (!f || !document.contains(f)) return;
+      delete f.dataset.enviando;
+      f.querySelectorAll("[aria-busy]").forEach(function (b) {
+        b.disabled = false; b.removeAttribute("aria-busy"); if (b.dataset.texto) b.innerHTML = b.dataset.texto;
+      });
+    });
+    document.addEventListener("input", function (ev) { if (ev.target.closest("form[data-cuidar]")) document.body.dataset.cambios = "1"; });
+    addEventListener("beforeunload", function (ev) { if (document.body.dataset.cambios) { ev.preventDefault(); ev.returnValue = ""; } });
+    addEventListener("pageshow", function () { document.querySelectorAll("form[data-enviando]").forEach(function (f) { delete f.dataset.enviando; }); });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

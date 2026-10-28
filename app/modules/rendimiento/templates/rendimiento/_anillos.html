@@ -1,0 +1,47 @@
+{# Anillos de rendimiento (DESIGN.md, sección Rendimiento). SVG desde el servidor; la animación la pone rendimiento.js. #}
+
+{% macro anillo(a, color, tam=132, grosor=8, clase_cifra="cifra-tarjeta") -%}
+{%- set r = (tam - grosor) / 2 -%}
+{%- set c = 2 * 3.14159 * r -%}
+<div class="anillo{% if tam < 100 %} mini{% endif %}{% if a.frac is none %} sin{% endif %}" style="--tam:{{ tam }}px" role="img"
+     aria-label="{{ a.etiqueta }}: {{ (a.cifra ~ ' ' ~ a.unidad) if a.frac is not none else 'sin dato' }}">
+  <svg viewBox="0 0 {{ tam }} {{ tam }}" width="{{ tam }}" height="{{ tam }}" aria-hidden="true">
+    <circle cx="{{ tam / 2 }}" cy="{{ tam / 2 }}" r="{{ r }}" class="anillo-riel{% if a.frac is none %} punteado{% endif %}" stroke-width="{{ grosor if a.frac is not none else 3 }}"/>
+    {% if a.frac is not none and a.frac > 0 %}
+    <circle cx="{{ tam / 2 }}" cy="{{ tam / 2 }}" r="{{ r }}" class="arco" stroke="var({{ color }})" stroke-width="{{ grosor }}"
+            stroke-dasharray="{{ '%.1f'|format(c) }}" style="--largo:{{ '%.1f'|format(c) }};--fin:{{ '%.1f'|format(c * (1 - a.frac)) }}"
+            transform="rotate(-90 {{ tam / 2 }} {{ tam / 2 }})"/>
+    {% endif %}
+  </svg>
+  <div class="centro">
+    {% if a.frac is not none %}
+    <span class="{{ clase_cifra }}"{% if a.contar is not none %} data-contar="{{ a.contar }}" data-decimales="{{ a.decimales }}"{% endif %}>{{ a.cifra }}</span>
+    {% if a.unidad and tam >= 100 %}<span class="unidad">{{ a.unidad }}</span>{% endif %}
+    {% else %}<span class="tenue">sin dato</span>{% endif %}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro medidor(valor_mil, tam=132, grosor=8) -%}
+{#- Medidor de 270 grados partido en 5 tramos con la rampa brasa; se encienden los tramos hasta el valor (0 a 10). -#}
+{%- set r = (tam - grosor) / 2 -%}
+{%- set c = 2 * 3.14159 * r -%}
+{%- set total = c * 0.75 -%}
+<div class="anillo{% if valor_mil is none %} sin{% endif %}" style="--tam:{{ tam }}px" role="img"
+     aria-label="Molestia del hombro promedio: {{ (valor_mil|decimal(1) ~ ' de 10') if valor_mil is not none else 'sin dato' }}">
+  <svg viewBox="0 0 {{ tam }} {{ tam }}" width="{{ tam }}" height="{{ tam }}" aria-hidden="true">
+    {% for i in range(5) %}
+    {% set encendido = valor_mil is not none and valor_mil > i * 2000 %}
+    <circle cx="{{ tam / 2 }}" cy="{{ tam / 2 }}" r="{{ r }}" class="zona{% if not encendido %} apagada{% endif %}"
+            stroke="{{ 'var(--r-z' ~ (i + 1) ~ ')' if encendido else 'var(--superficie-alta)' }}" stroke-width="{{ grosor }}"
+            stroke-dasharray="{{ '%.1f'|format(total / 5 - 3) }} {{ '%.1f'|format(c) }}" stroke-dashoffset="{{ '%.1f'|format(-(total / 5) * i) }}"
+            transform="rotate(135 {{ tam / 2 }} {{ tam / 2 }})" style="--i:{{ i }}"/>
+    {% endfor %}
+  </svg>
+  <div class="centro">
+    {% if valor_mil is not none %}
+    <span class="cifra-tarjeta" data-contar="{{ valor_mil }}" data-decimales="1">{{ valor_mil|decimal(1) }}</span><span class="unidad">de 10</span>
+    {% else %}<span class="tenue">sin dato</span>{% endif %}
+  </div>
+</div>
+{%- endmacro %}

@@ -1,0 +1,26 @@
+{% from "_iconos.html" import icono %}
+<div class="tarjeta linea-plantilla">
+  <label>Concepto<input type="text" name="concepto" value="{{ l.concepto }}" autocomplete="off" required></label>
+  <div class="dos">
+    <label>Bolsillo
+      <select name="bolsillo_id">{% for b in bolsillos %}<option value="{{ b.id }}" {% if b.id == l.bolsillo_id %}selected{% endif %}>{{ b.nombre }}</option>{% endfor %}</select>
+    </label>
+    <label>Monto
+      <select name="modo">
+        <option value="fijo" {% if l.modo == "fijo" %}selected{% endif %}>Fijo</option>
+        <option value="pedir" {% if l.modo == "pedir" %}selected{% endif %}>Se pide al aplicar</option>
+        <option value="resto" {% if l.modo == "resto" %}selected{% endif %}>Resto</option>
+      </select>
+    </label>
+  </div>
+  <div class="dos">
+    <label>Valor fijo<input class="monto" type="text" name="monto" inputmode="numeric" autocomplete="off" value="{{ l.monto|cop if l.monto is not none else '' }}" placeholder="Solo si es fijo"></label>
+    <label>Abona a
+      <select name="deuda_id"><option value="">Ninguna deuda</option>{% for d in deudas %}<option value="{{ d.id }}" {% if d.id == l.deuda_id %}selected{% endif %}>{{ d.nombre }}</option>{% endfor %}</select>
+    </label>
+  </div>
+  <label>Aporta a un fondo de aporte fijo
+    <select name="fondo_id"><option value="">Ningún fondo</option>{% for f in fondos_fijos %}<option value="{{ f.id }}" {% if f.id == l.fondo_id %}selected{% endif %}>{{ f.nombre }}</option>{% endfor %}</select>
+  </label>
+  <button type="button" class="fantasma" onclick="this.closest('.linea-plantilla').remove()">Quitar línea</button>
+</div>

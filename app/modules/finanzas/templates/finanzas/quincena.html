@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Quincena{% endblock %}
+{% block contenido %}
+<div class="cabecera"><div><h1>Quincena</h1><p class="suave">Registra el pago y dale destino a cada peso.</p></div>
+  <a class="secundario" href="/gasto">{{ icono("plus", 20) }}Gasto</a></div>
+
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+
+{% if not editor %}
+<form class="tarjeta" method="post" action="/quincena/propuesta">
+  <div class="dos">
+    <div>
+      <label for="fecha">Fecha del pago</label>
+      <input id="fecha" name="fecha" type="date" value="{{ fecha }}" required>
+    </div>
+    <div>
+      <label for="neto">Neto recibido</label>
+      <input id="neto" name="neto" class="monto" type="text" inputmode="numeric" autocomplete="off"
+             placeholder="4.650.000" value="{{ neto_txt }}" required>
+    </div>
+  </div>
+  <label for="tipo">Tipo de ingreso</label>
+  <select id="tipo" name="tipo">
+    {% for k, nombre in tipos.items() %}<option value="{{ k }}" {% if k == tipo %}selected{% endif %}>{{ nombre }}</option>{% endfor %}
+  </select>
+  <fieldset>
+    <legend>Plantilla</legend>
+    <div class="segmentos">
+      {% for p in plantillas %}
+      <label><input type="radio" name="plantilla_id" value="{{ p.id }}" {% if p.id == plantilla_id %}checked{% endif %}
+        hx-get="/quincena/pedidos" hx-target="#pedidos" hx-swap="outerHTML"><span>Del {{ p.nombre }}</span></label>
+      {% endfor %}
+      <label><input type="radio" name="plantilla_id" value="0" {% if not plantilla_id %}checked{% endif %}
+        hx-get="/quincena/pedidos" hx-target="#pedidos" hx-swap="outerHTML"><span>Sin plantilla</span></label>
+    </div>
+  </fieldset>
+  {% include "finanzas/_pedidos.html" %}
+  <button type="submit" class="secundario" style="width:100%">Calcular reparto</button>
+</form>
+{% else %}
+{% set e = editor %}
+<form method="post" action="/quincena/confirmar" data-cuidar
+      hx-post="/quincena/cuadre" hx-trigger="input changed delay:250ms, change" hx-target="#cuadre" hx-swap="outerHTML">
+  <input type="hidden" name="fecha" value="{{ fecha }}">
+  <input type="hidden" name="plantilla_id" value="{{ plantilla_id or 0 }}">
+  <input type="hidden" name="tipo" value="{{ tipo }}">
+  <section class="tarjeta">
+    <span class="tenue">{{ fecha|fecha_larga|capitalize }}, {{ tipos[tipo]|lower if tipo != "quincena" else "neto" }}</span>
+    <p class="cifra-hero">{{ e.neto|cop }}</p>
+    <details{% if e.errores.neto %} open{% endif %}>
+      <summary>Cambiar el neto</summary>
+      <label for="neto-ed">Neto recibido</label>
+      <input id="neto-ed" name="neto" class="monto" type="text" inputmode="numeric" autocomplete="off" value="{{ e.neto|cop }}"
+             {% if e.errores.neto %}aria-invalid="true"{% endif %}>
+    </details>
+    {% if e.pide_trm %}
+    <label for="trm">TRM para abonos en USD</label>
+    <input id="trm" name="trm" class="monto" type="text" inputmode="decimal" autocomplete="off" placeholder="3.199,61" value="{{ e.trm_txt }}" required>
+    {% endif %}
+  </section>
+
+  <section class="tarjeta" aria-labelledby="t-lineas">
+    <h2 id="t-lineas" style="margin-top:0">Reparto</h2>
+    <div id="lineas">
+    {% for l in e.lineas %}
+      {% set b = e.info_b.get(l.bolsillo_id) %}
+      <div class="linea-reparto">
+        <input type="hidden" name="concepto" value="{{ l.concepto }}">
+        <input type="hidden" name="bolsillo_id" value="{{ l.bolsillo_id }}">
+        <input type="hidden" name="modo" value="{{ l.modo }}">
+        <input type="hidden" name="deuda_id" value="{{ l.deuda_id or '' }}">
+        <input type="hidden" name="fondo_id" value="{{ l.fondo_id or '' }}">
+        <div class="info">
+          <label for="m{{ loop.index }}"><strong>{{ l.concepto }}</strong></label>
+          <small><span class="punto t-{{ b.tipo if b else 'libre' }}"></span>{{ b.nombre if b else "?" }}{% if l.modo == "resto" %} · resto{% elif l.modo == "fondo" %} · provisión automática{% endif %}{% if l.deuda_id and e.info_d.get(l.deuda_id) %} · abona a {{ e.info_d[l.deuda_id].nombre }}{% endif %}</small>
+        </div>
+        <input id="m{{ loop.index }}" class="monto" type="text" name="monto" inputmode="numeric" autocomplete="off"
+               value="{{ l.extra.txt if l.extra.get('txt') else l.monto|cop }}"
+               {% if e.errores.get(loop.index0) or (l.monto or 0) < 0 %}aria-invalid="true" aria-describedby="err{{ loop.index }}"{% endif %}>
+        {% if e.errores.get(loop.index0) %}<p id="err{{ loop.index }}" class="error">{{ e.errores[loop.index0] }}</p>
+        {% elif (l.monto or 0) < 0 %}<p id="err{{ loop.index }}" class="error">Las líneas fijas superan el neto. Baja alguna línea.</p>{% endif %}
+      </div>
+    {% endfor %}
+    </div>
+    <div class="acciones">
+      <button type="button" class="secundario" hx-get="/quincena/linea-nueva" hx-target="#lineas" hx-swap="beforeend">{{ icono("plus", 20) }}Agregar línea</button>
+      <button type="submit" class="fantasma" formaction="/quincena/recalcular" formnovalidate>Recalcular resto</button>
+    </div>
+  </section>
+
+  {% include "finanzas/_totales.html" %}
+  {% include "finanzas/_cuadre.html" %}
+  <p style="margin-top:1rem"><a href="/quincena">Empezar de nuevo</a></p>
+</form>
+{% endif %}
+
+<section aria-labelledby="t-historial">
+  <h2 id="t-historial">Historial</h2>
+  <div class="tarjeta">
+    {% if historial %}
+    <ul class="filas">
+      {% for h in historial %}
+      <li><a class="fila nombre" href="/quincena/{{ h.id }}"><span>{{ h.fecha|fecha_corta }}</span><small>{% if h.tipo != "quincena" %}{{ tipos[h.tipo] }} · {% endif %}{% if h.plantilla %}Plantilla del {{ h.plantilla }}{% else %}Sin plantilla{% endif %}</small></a><span class="monto cifra">{{ h.neto|cop }}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="vacio">Aún no hay quincenas confirmadas.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,42 @@
+<div id="comparacion" class="comparacion-tests">
+  {% if lista_comp|length > 1 %}
+  <form method="get" action="/rendimiento/tests/comparar" class="dos fechas-comparar"
+        hx-get="/rendimiento/tests/comparar" hx-trigger="change" hx-target="#comparacion" hx-select="#comparacion" hx-swap="outerHTML">
+    <input type="hidden" name="tipo" value="{{ tipo_comp }}">
+    {% for nombre, actual, etiqueta in [("a", ma, "Antes"), ("b", mb, "Después")] %}
+    <div>
+      <label for="c-{{ nombre }}">{{ etiqueta }}</label>
+      <select id="c-{{ nombre }}" name="{{ nombre }}">
+        {% for m in lista_comp %}
+        <option value="{{ clave(m) }}" {% if m is sameas actual %}selected{% endif %}>{{ m.fecha|fecha_test(m.precision, m.aproximada) }}{% if m.metodo %} · {{ m.metodo }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endfor %}
+  </form>
+  {% if comp %}
+  {% if comp.metodo_distinto %}
+  <p class="aviso" role="note">Método distinto: {{ comp.a.metodo or "sin método" }} frente a {{ comp.b.metodo or "sin método" }}. Los valores no se comparan como una sola serie.</p>
+  {% endif %}
+  <table class="tabla-comparar">
+    <thead><tr><th>Medida</th><th class="num">Antes</th><th class="num">Después</th><th class="num">Cambio</th></tr></thead>
+    <tbody>
+      {% for f in comp.filas %}
+      <tr>
+        <td>{{ f.medida }}</td>
+        <td class="num">{{ f.a|decimal if f.a is not none else "sin dato" }}</td>
+        <td class="num">{{ f.b|decimal if f.b is not none else "sin dato" }}</td>
+        <td class="num">
+          {% if f.delta %}<span class="delta {{ f.delta.clase }}">{{ f.delta|delta_txt(f.unidad) }}</span>{% if f.delta.pct_mil is not none %}<small class="tenue"> {{ f.delta.signo }}{{ f.delta.pct_mil|pct_delta }}</small>{% endif %}
+          {% elif comp.metodo_distinto %}<span class="tenue">método distinto</span>
+          {% else %}<span class="tenue">sin dato</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="tenue">Elige dos fechas distintas.</p>{% endif %}
+  {% else %}
+  <p class="vacio">Para comparar hacen falta dos fechas de este test.</p>
+  {% endif %}
+</div>

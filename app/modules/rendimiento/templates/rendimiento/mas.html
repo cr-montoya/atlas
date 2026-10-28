@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Más{% endblock %}
+{% block contenido %}
+<div class="r registro">
+<h1>Más</h1>
+<div class="tarjeta r-filas menu-mas">
+  <a class="fila-enlace fila-menu" href="/rendimiento/voz">{{ icono("microphone", 22, "c-cardio") }}<span>Contar por voz<small class="tenue">Comidas, agua y entrenamientos en un audio</small></span>{{ icono("arrow-up-right", 18) }}</a>
+  <a class="fila-enlace fila-menu" href="/rendimiento/sensaciones/historial">{{ icono("heartbeat", 22, "c-muaythai") }}<span>Cómo me sentí<small class="tenue">Energía, síntomas y dolor de los últimos 14 días, con el reloj</small></span>{{ icono("arrow-up-right", 18) }}</a>
+  <a class="fila-enlace fila-menu" href="/rendimiento/competencia">{{ icono("hand-fist", 22, "c-judo") }}<span>Competencia<small class="tenue">Cuenta regresiva, plan, pesajes, guion y checklist</small></span>{{ icono("arrow-up-right", 18) }}</a>
+  <a class="fila-enlace fila-menu" href="/rendimiento/confirmar">{{ icono("check-circle", 22, "c-bjj") }}<span>Confirmar judo o BJJ<small class="tenue">Sesiones de Polar por semana</small></span>{{ icono("arrow-up-right", 18) }}</a>
+  <a class="fila-enlace fila-menu" href="/rendimiento/actividades">{{ icono("arrows-clockwise", 22, "c-cardio") }}<span>Actividades del reloj<small class="tenue">Garmin, Polar y sincronizar</small></span>{{ icono("arrow-up-right", 18) }}</a>
+  <a class="fila-enlace fila-menu" href="/rendimiento/catalogo/ejercicios">{{ icono("barbell", 22, "c-fuerza") }}<span>Catálogo de ejercicios<small class="tenue">Agregar, marcar los que cargan el hombro</small></span>{{ icono("arrow-up-right", 18) }}</a>
+  <a class="fila-enlace fila-menu" href="/rendimiento/catalogo/tecnicas">{{ icono("target", 22, "c-bjj") }}<span>Catálogo de técnicas<small class="tenue">Judo, BJJ y Muay Thai</small></span>{{ icono("arrow-up-right", 18) }}</a>
+</div>
+<div class="acciones">
+  <button type="button" class="secundario" id="tema">{{ icono("sun", 20) }}<span>Cambiar tema</span></button>
+  <form method="post" action="/salir" style="margin:0"><button type="submit" class="secundario">{{ icono("sign-out", 20) }}<span>Salir</span></button></form>
+</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("tema").addEventListener("click", function () {
+  var r = document.documentElement, t = r.dataset.theme === "light" ? "dark" : "light";
+  r.dataset.theme = t;
+  try { localStorage.setItem("tema", t); } catch (e) {}
+  document.querySelector('meta[name="theme-color"]').content = t === "light" ? "#f7f1e8" : "#131211";
+});
+</script>
+{% endblock %}

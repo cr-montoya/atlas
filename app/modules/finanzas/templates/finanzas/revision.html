@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block titulo %}Revisión {{ mes }}{% endblock %}
+{% block contenido %}
+{% set v = valores %}
+<p><a href="/mas">Más</a></p>
+<h1>Revisión de {{ mes }}</h1>
+<p class="suave">Cinco preguntas para cerrar el mes. Quedan en el resumen mensual y en el resumen para IA.</p>
+{% if ok %}<p class="aviso bien" role="status">Revisión guardada. El resumen para IA ya la incluye.</p>{% endif %}
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+<form class="tarjeta" method="get" action="/revision">
+  <label for="r-mes">Mes</label>
+  <input id="r-mes" name="mes" type="month" value="{{ mes }}" required>
+  <button type="submit" class="secundario" style="width:100%">Ver otro mes</button>
+</form>
+<form class="tarjeta" method="post" action="/revision" data-cuidar>
+  <input type="hidden" name="mes" value="{{ mes }}">
+  {% for k, pregunta in preguntas.items() if k != "sensacion" %}
+  <label for="r-{{ k }}">{{ pregunta }}</label>
+  <textarea id="r-{{ k }}" name="{{ k }}" rows="3">{{ v.get(k, r[k] if r else '') }}</textarea>
+  {% endfor %}
+  <fieldset>
+    <legend>{{ preguntas.sensacion }}</legend>
+    {% set ssel = v.get('sensacion', (r.sensacion|string) if r and r.sensacion else '') %}
+    <div class="segmentos">{% for n in range(1, 6) %}<label><input type="radio" name="sensacion" value="{{ n }}" {% if ssel == n|string %}checked{% endif %}><span>{{ n }}</span></label>{% endfor %}</div>
+  </fieldset>
+  <button type="submit" class="primario">Guardar revisión</button>
+</form>
+{% endblock %}

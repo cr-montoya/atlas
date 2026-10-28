@@ -1,0 +1,6 @@
+<section id="totales" class="tarjeta" aria-labelledby="t-totales"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <h2 id="t-totales" style="margin-top:0">Total por bolsillo</h2>
+  <ul class="leyenda">
+    {% for s in e.tira %}<li><span class="punto t-{{ s.tipo }}"></span>{{ s.nombre }}<span class="monto cifra">{{ s.monto|cop }}</span></li>{% endfor %}
+  </ul>
+</section>

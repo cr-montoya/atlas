@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Comidas{% endblock %}
+{% block ancho %} amplio{% endblock %}
+{% block contenido %}
+<div class="r comidas-pagina">
+<p><a href="/rendimiento/registrar">{{ icono("arrow-left", 18) }} Registrar</a></p>
+<div class="cabecera r-cab">
+  <div>
+    <h1>Comidas</h1>
+    <p class="suave">{{ d|fecha_larga|capitalize }}{% if d == hoy %}, hoy{% endif %}</p>
+  </div>
+  <nav class="dia-nav" aria-label="Día">
+    <a class="secundario" href="?fecha={{ anterior }}" aria-label="Día anterior">{{ icono("arrow-left", 20) }}</a>
+    {% if d < hoy %}<a class="secundario" href="?fecha={{ siguiente }}" aria-label="Día siguiente"><span class="flecha-der">{{ icono("arrow-left", 20) }}</span></a>
+    <a class="secundario" href="/rendimiento/comidas">Hoy</a>{% endif %}
+  </nav>
+</div>
+
+<p><a class="contar-voz" role="button" href="/rendimiento/voz">{{ icono("microphone", 20) }}<span>Contar por voz</span></a></p>
+{% if plan %}
+<p class="tenue">Plan vigente de {{ plan.profesional or "tu nutricionista" }} ({{ plan.archivo }}){% if plan.control %}. Próximo control: {{ plan.control }}{% endif %}. Lo que registras es tuyo: la app no estima porciones ni califica el día.</p>
+{% else %}
+<p class="aviso">No encontré un plan nutricional vigente en 04_Nutrition del vault. Puedes registrar igual.</p>
+{% endif %}
+{% if dia.vault_estado == "manual" %}
+<p class="aviso" role="status">{{ ruta_inbox }} ya lo escribiste a mano: la app no lo sobrescribe. Lo de aquí queda solo en la app.</p>
+{% elif dia.vault_estado == "error" %}
+<p class="aviso mal" role="alert">No pude escribir {{ ruta_inbox }} en el vault. Lo registrado quedó en la app.</p>
+{% elif escribe_vault %}
+<p class="tenue">Se guarda también en el vault, en {{ ruta_inbox }}, para la revisión semanal.</p>
+{% else %}
+<p class="tenue">Queda solo en la app. Para mandarlo al inbox del vault, activa BRAIN_ESCRIBIR_COMIDAS=1.</p>
+{% endif %}
+
+<div class="mosaico-comidas">
+  {% for t in tarjetas %}{% with fecha=t.fecha, clave=t.clave, nombre=t.nombre, c=t.c, mp=t.mp, grupos=t.grupos, error=t.error, plan_n=t.plan_n %}{% include "rendimiento/_comida.html" %}{% endwith %}{% endfor %}
+
+  <section class="tarjeta dia-comidas" id="dia" aria-labelledby="h-dia">
+    <h2 id="h-dia">Agua y día</h2>
+    <p class="tenue">Vasos de {{ VASO_ML }} ml, fuera de la hidratación del entrenamiento.</p>
+    {% include "rendimiento/_agua.html" %}
+    <form method="post" action="/rendimiento/comidas/{{ d.isoformat() }}">
+      <label for="d-supl">Suplementos</label>
+      <input id="d-supl" name="suplementos" value="{{ dia.suplementos }}" maxlength="300" autocomplete="off">
+      <label for="d-notas">Notas (hambre, antojos, salidas)</label>
+      <textarea id="d-notas" name="notas" rows="2" maxlength="500">{{ dia.notas }}</textarea>
+      <button type="submit" class="secundario">Guardar notas</button>
+    </form>
+  </section>
+</div>
+
+<section class="tarjeta semana-comidas" id="semana" aria-labelledby="h-semana">
+  <h2 id="h-semana">Esta semana</h2>
+  <p class="tenue">{{ semana.registrados }} de {{ semana.posibles }} comidas registradas hasta hoy, en {{ semana.dias_con_registro }} día{{ "s" if semana.dias_con_registro != 1 }}. El punto lleno es "lo del plan"; el anillo, una comida con tus palabras.</p>
+  <table class="rejilla-comidas">
+    <thead><tr><th scope="col"><span class="oculto">Momento</span></th>{% for x in semana.dias %}<th scope="col">{{ x.letra }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for k, n in semana.momentos %}
+      <tr><th scope="row">{{ n }}</th>
+        {% for x in semana.dias %}{% set m = semana.marcas.get(x.fecha ~ "|" ~ k) %}
+        <td><a href="?fecha={{ x.fecha }}#c-{{ k }}" class="punto {{ m or ('futuro' if x.futuro else 'nada') }}" {% if x.futuro %}tabindex="-1" aria-disabled="true"{% endif %}
+               aria-label="{{ MOMENTOS[k] }} del {{ x.fecha|fecha_corta }}: {{ 'lo del plan' if m == 'plan' else ('registrada' if m else 'sin registro') }}"></a></td>
+        {% endfor %}</tr>
+      {% endfor %}
+      <tr><th scope="row">Agua</th>{% for x in semana.dias %}<td class="cifra vasos">{{ x.agua_vasos if x.agua_vasos is not none else "" }}</td>{% endfor %}</tr>
+    </tbody>
+  </table>
+  {% if semana.grupos %}
+  <h3>Intercambios marcados frente al plan</h3>
+  <p class="tenue">Solo en las comidas donde marcaste intercambios.</p>
+  <ul class="barras-h">
+    {% for g in semana.grupos %}
+    <li><span class="nombre">{{ g.grupo|capitalize }}</span><span class="barra-par"><i class="barra-b" style="width: {{ ([g.marcado / g.plan, 1]|min * 100)|round(1) if g.plan else 100 }}%"></i></span><b class="cifra">{{ g.marcado }}/{{ g.plan }}</b></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+</div>
+{% endblock %}

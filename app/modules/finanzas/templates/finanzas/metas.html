@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "finanzas/_macros.html" import barra_meta, grafica_patrimonio %}
+{% block titulo %}Metas{% endblock %}
+{% block contenido %}
+<div class="cabecera"><div><h1>Metas</h1><p class="suave">Avance según la última foto mensual.</p></div></div>
+<div class="tarjeta">
+  {% for m in metas %}
+  {{ barra_meta(m) }}
+  {% else %}<p class="vacio">Aún no hay metas.</p>{% endfor %}
+</div>
+
+<details class="tarjeta" {% if error %}open{% endif %}>
+  <summary>Agregar meta</summary>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/metas">
+    <label for="m-nombre">Nombre</label>
+    <input id="m-nombre" name="nombre" type="text" required autocomplete="off" placeholder="6 meses de básicos">
+    <label for="m-objetivo">Objetivo</label>
+    <input id="m-objetivo" name="objetivo" class="monto" type="text" inputmode="numeric" autocomplete="off" required placeholder="17.000.000">
+    <fieldset>
+      <legend>Cuentas que suman a la meta</legend>
+      {% for c in cuentas %}
+      <label style="display:flex;align-items:center;gap:0.5rem;min-height:44px;margin:0"><input type="checkbox" name="cuenta_id" value="{{ c.id }}"> {{ c.nombre }}</label>
+      {% endfor %}
+    </fieldset>
+    <button type="submit" class="secundario" style="width:100%">Agregar meta</button>
+  </form>
+</details>
+
+<section aria-labelledby="t-foto">
+  <div class="cabecera" style="margin:2rem 0 0.75rem"><h2 id="t-foto" style="margin:0">Foto mensual</h2><a class="secundario" href="/fotos/nueva">Nueva foto</a></div>
+  <div class="tarjeta">
+    {% if foto %}
+    <p class="tenue" style="margin:0">Patrimonio neto al {{ foto.fecha|fecha_corta }}</p>
+    <p class="cifra-hero {{ 'neg' if patrimonio.neto < 0 else '' }}">{{ patrimonio.neto|cop }}</p>
+    <ul class="filas">
+      {% for s in saldos %}<li><span class="nombre">{{ s.nombre }}</span><span class="monto cifra">{{ s.saldo|cop }}</span></li>{% endfor %}
+      <li><span class="nombre"><strong>Cuentas</strong></span><span class="monto cifra">{{ patrimonio.activos|cop }}</span></li>
+      <li><span class="nombre"><strong>Deudas en COP</strong><small>TRM {{ foto.trm|trm }}</small></span><span class="monto cifra">-{{ patrimonio.deudas_cop|cop }}</span></li>
+    </ul>
+    {{ grafica_patrimonio(serie) }}
+    {% else %}
+    <p class="vacio">Sin fotos todavía. Toma la primera para ver el avance y el patrimonio.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% from "finanzas/_macros.html" import tira %}
+<div id="cuadre" class="resumen-cuadre" aria-live="polite">
+  <div class="fila-estado">
+    {% if e.cuadre.cuadra %}
+    <p class="estado-cuadre pos">Cuadra: 0</p>
+    {% elif e.cuadre.diferencia > 0 %}
+    <p class="estado-cuadre neg">Faltan <span class="cifra">{{ e.cuadre.diferencia|cop }}</span></p>
+    {% else %}
+    <p class="estado-cuadre neg">Sobran <span class="cifra">{{ (-e.cuadre.diferencia)|cop }}</span></p>
+    {% endif %}
+    <span class="tenue cifra">de {{ e.neto|cop }}</span>
+  </div>
+  {{ tira(e.tira, e.cuadre.diferencia, leyenda=False) }}
+  {% if not e.puede and e.motivo and not e.motivo.startswith("La suma") %}<p class="error" style="margin:0 0 0.5rem">{{ e.motivo }}</p>{% endif %}
+  <button type="submit" class="primario" {% if not e.puede %}disabled aria-disabled="true"{% endif %}>Confirmar reparto</button>
+</div>
+{% if oob %}{% include "finanzas/_totales.html" %}{% endif %}

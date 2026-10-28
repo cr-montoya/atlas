@@ -1,0 +1,15 @@
+{% from "_iconos.html" import icono %}
+<p id="checklist-cuenta" class="tenue checklist-cuenta" aria-live="polite"{% if parcial %} hx-swap-oob="innerHTML"{% endif %}>{{ n_hechas }} de {{ c.checklist|length }}</p>
+<div id="checklist-lista" class="tarjeta r-filas checklist">
+  {% for item in c.checklist %}
+  {% set hecho = item in hechas %}
+  <form method="post" action="/rendimiento/competencia/checklist" hx-post="/rendimiento/competencia/checklist"
+        hx-target="#checklist-lista" hx-swap="outerHTML">
+    <input type="hidden" name="item" value="{{ item }}">
+    <input type="hidden" name="marcado" value="{{ '0' if hecho else '1' }}">
+    <button type="submit" id="chk-{{ loop.index }}" class="fila-check{% if hecho %} hecho{% endif %}" aria-pressed="{{ 'true' if hecho else 'false' }}">
+      <span class="caja">{% if hecho %}{{ icono("check", 16) }}{% endif %}</span><span>{{ item }}</span>
+    </button>
+  </form>
+  {% else %}<p class="vacio">Sin checklist en la sección del torneo del vault.</p>{% endfor %}
+</div>

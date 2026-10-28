@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Combate{% endblock %}
+{% block contenido %}
+<div class="r registro">
+<p><a href="/rendimiento/registrar">{{ icono("arrow-left", 18) }} Registrar</a></p>
+<div class="cabecera">
+  <div><h1>Combate</h1><p class="suave">{{ s.fecha|fecha_larga|capitalize }}{% if s.guardada %} · guardada{% endif %}</p></div>
+</div>
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+
+<form method="post" action="/rendimiento/sesiones/{{ s.id }}/disciplina" class="disciplina">
+  <fieldset>
+    <legend>Disciplina</legend>
+    <div class="segmentos">
+      {% for k, v in DISCIPLINAS.items() %}
+      <label><input type="radio" name="disciplina" value="{{ k }}" {% if s.disciplina == k %}checked{% endif %}
+                    onchange="this.form.requestSubmit()"><span><i class="punto-disciplina b-{{ k }}" aria-hidden="true"></i>{{ v }}</span></label>
+      {% endfor %}
+    </div>
+    <noscript><button type="submit" class="secundario">Cambiar</button></noscript>
+  </fieldset>
+</form>
+
+<div id="bloques-combate">
+  <h2 class="oculto">Bloques</h2>
+  {% for b in bloques %}{% include "rendimiento/_bloque_combate.html" %}{% endfor %}
+</div>
+
+<form method="post" action="/rendimiento/sesiones/{{ s.id }}/bloques" class="nuevo-bloque"
+      hx-post="/rendimiento/sesiones/{{ s.id }}/bloques" hx-target="#bloques-combate" hx-swap="beforeend">
+  <p class="etiqueta-bloque">Agregar bloque</p>
+  <div class="tipos-bloque">
+    {% for k, v in TIPOS_BLOQUE.items() %}
+    <button type="submit" name="tipo" value="{{ k }}" class="secundario">{{ icono("plus", 18) }}<span>{{ v }}</span></button>
+    {% endfor %}
+  </div>
+</form>
+
+<p id="total-sesion" class="total-sesion" aria-live="polite">Tiempo en bloques <b class="cifra">{{ duracion_s|duracion if duracion_s else "sin dato" }}</b></p>
+
+{% include "rendimiento/_cierre.html" %}
+</div>
+{% endblock %}

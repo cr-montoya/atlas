@@ -1,0 +1,66 @@
+{% from "_iconos.html" import icono %}
+{% set e = b.ejercicio if b else None %}
+{% if b %}
+<article class="tarjeta ejercicio" id="ej-{{ e.id }}">
+  <header class="ejercicio-cab">
+    <h3>{{ e.nombre }}</h3>
+    <span class="cifra suave">{{ b.carga_g|kg }}</span>
+    <form method="post" action="/rendimiento/sesiones/{{ s.id }}/ejercicios/{{ e.id }}/quitar"
+          hx-post="/rendimiento/sesiones/{{ s.id }}/ejercicios/{{ e.id }}/quitar" hx-target="#ej-{{ e.id }}" hx-swap="outerHTML"
+          {% if b.series|length > 1 %}hx-confirm="¿Quitar {{ e.nombre }} y sus {{ b.series|length }} series?"{% endif %}>
+      <button type="submit" class="icono-btn" aria-label="Quitar {{ e.nombre }} de la sesión">{{ icono("x", 20) }}</button>
+    </form>
+  </header>
+  {% if e.carga_hombro %}
+  <p class="aviso aviso-hombro" role="note">{{ icono("warning", 20) }}<span>{{ aviso_hombro }}</span></p>
+  {% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <div class="series-cab" aria-hidden="true"><span></span><span>Reps</span><span>{% if e.tipo_carga in ("peso_corporal", "peso_corporal_lastre") %}Lastre kg{% elif e.tipo_carga == "mancuerna_par" %}kg por mancuerna{% else %}kg{% endif %}</span></div>
+  <ol class="series">
+    {% for sr in b.series %}
+    <li class="serie">
+      <form method="post" action="/rendimiento/series/{{ sr.id }}" hx-post="/rendimiento/series/{{ sr.id }}"
+            hx-trigger="change" hx-target="#ej-{{ e.id }}" hx-swap="outerHTML" class="serie-form">
+        <span class="n cifra">{{ loop.index }}</span>
+        <div class="paso">
+          <button type="button" class="paso-btn" aria-label="Una repetición menos en la serie {{ loop.index }}"
+                  hx-post="/rendimiento/series/{{ sr.id }}/ajustar?campo=reps&paso=-1" hx-target="#ej-{{ e.id }}" hx-swap="outerHTML">{{ icono("minus", 18) }}</button>
+          <input name="reps" value="{{ sr.reps }}" inputmode="numeric" class="cifra" autocomplete="off"
+                 aria-label="Repeticiones de la serie {{ loop.index }}">
+          <button type="button" class="paso-btn" aria-label="Una repetición más en la serie {{ loop.index }}"
+                  hx-post="/rendimiento/series/{{ sr.id }}/ajustar?campo=reps&paso=1" hx-target="#ej-{{ e.id }}" hx-swap="outerHTML">{{ icono("plus", 18) }}</button>
+        </div>
+        <div class="paso">
+          <button type="button" class="paso-btn" aria-label="2,5 kg menos en la serie {{ loop.index }}"
+                  hx-post="/rendimiento/series/{{ sr.id }}/ajustar?campo=carga&paso=-1" hx-target="#ej-{{ e.id }}" hx-swap="outerHTML">{{ icono("minus", 18) }}</button>
+          <input name="carga" value="{{ sr.carga_g|carga }}" inputmode="decimal" class="cifra" autocomplete="off"
+                 aria-label="Carga en kg de la serie {{ loop.index }}">
+          <button type="button" class="paso-btn" aria-label="2,5 kg más en la serie {{ loop.index }}"
+                  hx-post="/rendimiento/series/{{ sr.id }}/ajustar?campo=carga&paso=1" hx-target="#ej-{{ e.id }}" hx-swap="outerHTML">{{ icono("plus", 18) }}</button>
+        </div>
+        <label class="rpe"><span>RPE</span>
+          <select name="rpe" aria-label="RPE de la serie {{ loop.index }}">
+            <option value="">sin</option>
+            {% for x in [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10] %}
+            <option value="{{ x }}" {% if sr.rpe_x10 == (x * 10)|int %}selected{% endif %}>{{ (x * 1000)|int|decimal }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="button" class="icono-btn borrar" aria-label="Borrar la serie {{ loop.index }}"
+                hx-post="/rendimiento/series/{{ sr.id }}/borrar" hx-target="#ej-{{ e.id }}" hx-swap="outerHTML">{{ icono("trash", 18) }}</button>
+        <noscript><button type="submit" class="secundario">Guardar</button></noscript>
+      </form>
+    </li>
+    {% endfor %}
+  </ol>
+  <form method="post" action="/rendimiento/sesiones/{{ s.id }}/ejercicios/{{ e.id }}/serie"
+        hx-post="/rendimiento/sesiones/{{ s.id }}/ejercicios/{{ e.id }}/serie" hx-target="#ej-{{ e.id }}" hx-swap="outerHTML">
+    <button type="submit" class="secundario mas-serie">{{ icono("plus", 20) }}<span>Serie</span></button>
+  </form>
+</article>
+{% else %}
+<div id="ej-{{ ejercicio_id }}" hidden></div>
+{% endif %}
+{% if oob %}
+<p id="total-sesion" class="total-sesion" hx-swap-oob="true" aria-live="polite">Carga total <b class="cifra">{{ total_g|kg }}</b></p>
+{% endif %}

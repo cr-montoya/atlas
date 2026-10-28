@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Registrar test{% endblock %}
+{% block contenido %}
+<div class="r registro">
+<p><a href="/rendimiento/tests">{{ icono("arrow-left", 18) }} Tests</a></p>
+<h1>Registrar test</h1>
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+
+<nav class="segmentos chips tres tipos-test" aria-label="Tipo de test">
+  {% for k, v in NOMBRES_TIPO.items() %}
+  <a href="/rendimiento/tests/nuevo?tipo={{ k }}" class="chip-tipo{% if k == tipo %} activo{% endif %}" {% if k == tipo %}aria-current="page"{% endif %}>{{ v }}</a>
+  {% endfor %}
+</nav>
+
+<form method="post" action="/rendimiento/tests" class="cierre form-test">
+  <input type="hidden" name="tipo" value="{{ tipo }}">
+  <div class="dos">
+    <div>
+      <label for="t-fecha">Fecha</label>
+      <input id="t-fecha" name="fecha" value="{{ valores.get('fecha', hoy) }}" autocomplete="off" inputmode="numeric" placeholder="2026-10-20">
+    </div>
+    <div>
+      <label for="t-evaluador">Evaluador</label>
+      <input id="t-evaluador" name="evaluador" value="{{ valores.get('evaluador', '') }}" autocomplete="off" placeholder="{{ "Centro deportivo" if demo else "Centro Uno" }}">
+    </div>
+  </div>
+  <label class="check"><input type="checkbox" name="aproximada" value="1" {% if valores.get('aproximada') %}checked{% endif %}> La fecha es aproximada</label>
+
+  {% for medida, unidad, direccion in campos %}
+  <label for="v{{ loop.index0 }}">{{ medida }}{% if unidad %} ({{ unidad }}){% endif %}</label>
+  <input id="v{{ loop.index0 }}" name="v{{ loop.index0 }}" value="{{ valores.get('v' ~ loop.index0, '') }}" inputmode="decimal"
+         class="cifra monto" autocomplete="off">
+  {% endfor %}
+
+  {% if tipo in ("otro", "rm") %}
+  <div class="dos">
+    <div><label for="m-libre">{% if tipo == "rm" %}Ejercicio y medida{% else %}Medida{% endif %}</label>
+      <input id="m-libre" name="medida_libre" value="{{ valores.get('medida_libre', '') }}" autocomplete="off"></div>
+    <div><label for="v-libre">Valor</label>
+      <input id="v-libre" name="valor_libre" value="{{ valores.get('valor_libre', '') }}" inputmode="decimal" class="cifra monto" autocomplete="off"></div>
+  </div>
+  <div class="dos">
+    <div><label for="u-libre">Unidad</label><input id="u-libre" name="unidad_libre" value="{{ valores.get('unidad_libre', '') }}" autocomplete="off"></div>
+    <div><label for="d-libre">Mejor si</label>
+      <select id="d-libre" name="direccion_libre"><option value="mas">es más alto</option><option value="menos">es más bajo</option><option value="neutra">no aplica</option></select></div>
+  </div>
+  {% endif %}
+
+  {% if tipo == "antropometria" %}
+  <label for="t-metodo">Método</label>
+  <input id="t-metodo" name="metodo" value="{{ valores.get('metodo', '') }}" autocomplete="off" placeholder="{{ "Antropometría ISAK" if demo else "Antropometría, Yuhasz (Centro Uno)" }}">
+  <p class="tenue">Solo se comparan mediciones con el mismo método.</p>
+  {% endif %}
+  <details {% if valores.get('protocolo') or valores.get('notas') or tipo == 'movilidad' %}open{% endif %}>
+    <summary>Protocolo y notas</summary>
+    <label for="t-protocolo">Protocolo</label>
+    <input id="t-protocolo" name="protocolo" value="{{ valores.get('protocolo', '') }}" autocomplete="off" placeholder="Plataforma, mejor de 3 intentos">
+    <label for="t-notas">Notas</label>
+    <textarea id="t-notas" name="notas" rows="3">{{ valores.get('notas', '') }}</textarea>
+  </details>
+  <div class="barra-accion"><button type="submit" class="primario">Guardar test</button></div>
+</form>
+</div>
+{% endblock %}

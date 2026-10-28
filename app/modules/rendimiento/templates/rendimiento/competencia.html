@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Competencia{% endblock %}
+{% block ancho %} amplio{% endblock %}
+
+{% macro dia_plan(p, hoy) -%}
+<div class="dia-plan{% if p.fecha == hoy %} hoy{% elif p.fecha < hoy %} apagada{% endif %}">
+  <p class="dia-plan-fecha">{{ p.fecha|fecha_larga|capitalize }}{% if p.fecha == hoy %} <span class="chip-hoy">Hoy</span>{% endif %}</p>
+  <dl>
+    {% if p.combate %}<div><dt><i class="b-judo"></i>Judo y BJJ</dt><dd>{{ p.combate }}</dd></div>{% endif %}
+    {% if p.fuerza %}<div><dt><i class="b-fuerza"></i>Fuerza</dt><dd>{{ p.fuerza }}</dd></div>{% endif %}
+    {% if p.cardio %}<div><dt><i class="b-cardio"></i>Cardio</dt><dd>{{ p.cardio }}</dd></div>{% endif %}
+    {% if p.notas %}<div><dt><i class="b-otro"></i>Notas</dt><dd>{{ p.notas }}</dd></div>{% endif %}
+    {% if not (p.combate or p.fuerza or p.cardio or p.notas) %}<div><dd class="tenue">Sin nada en el plan.</dd></div>{% endif %}
+  </dl>
+</div>
+{%- endmacro %}
+
+{% block contenido %}
+<div class="r competencia">
+<p><a class="volver" href="/rendimiento/mas">{{ icono("arrow-left", 18) }} Más</a></p>
+{% if not c %}
+<h1>Competencia</h1>
+{% if error_vault %}<p class="vacio">{{ error_vault }}.</p>
+{% elif pasada %}<p class="vacio">{{ pasada.nombre }} fue el {{ pasada.torneo.date()|fecha_corta }}. No hay otra competencia en planificacion-semanal.md.</p>
+{% else %}<p class="vacio">No hay una competencia en planificacion-semanal.md (sección "Hacia el torneo" con las líneas Torneo y Pesaje).</p>{% endif %}
+{% else %}
+<h1>{{ c.nombre }}</h1>
+{% if c.detalle %}<p class="suave">{{ c.detalle }}</p>{% endif %}
+{% if c.avisos %}<div class="aviso-vault tenue" role="note"><p>Del vault: {{ c.avisos|join("; ") }}.</p></div>{% endif %}
+
+<div class="cuentas">
+  <section class="tarjeta t-cuenta" aria-labelledby="k-pesaje">
+    <header id="k-pesaje">{{ icono("target", 20, "c-judo") }}<span>Pesaje</span></header>
+    {% if cuenta_pesaje.dias and cuenta_pesaje.dias > 1 %}<p class="cifra-tarjeta grande">{{ cuenta_pesaje.dias }}<span class="unidad">días</span></p>
+    {% else %}<p class="cifra-mini cuenta-texto">{{ cuenta_pesaje.texto|capitalize }}</p>{% endif %}
+    <footer class="tenue">{{ c.pesaje_inicio.date()|fecha_larga|capitalize }}, {{ c.pesaje_inicio.strftime("%H:%M") }} a {{ c.pesaje_fin.strftime("%H:%M") }}{% if c.pesaje_condicion %}<br>{{ c.pesaje_condicion|capitalize }}{% endif %}{% if c.limite_g %} · límite {{ c.limite_g|decimal(1) }} kg{% endif %}</footer>
+  </section>
+  <section class="tarjeta t-cuenta" aria-labelledby="k-torneo">
+    <header id="k-torneo">{{ icono("hand-fist", 20, "c-judo") }}<span>Torneo</span></header>
+    {% if cuenta_torneo.dias and cuenta_torneo.dias > 1 %}<p class="cifra-tarjeta grande">{{ cuenta_torneo.dias }}<span class="unidad">días</span></p>
+    {% else %}<p class="cifra-mini cuenta-texto">{{ cuenta_torneo.texto|capitalize }}</p>{% endif %}
+    <footer class="tenue">{{ c.torneo.date()|fecha_larga|capitalize }}, {{ c.torneo.strftime("%H:%M") }}{% if c.lugar %}<br>{{ c.lugar }}{% endif %}</footer>
+  </section>
+</div>
+
+<section aria-labelledby="t-plan"><h2 id="t-plan">Plan</h2>
+  {% if c.en_validacion %}
+  <div class="tarjeta"><p class="vacio">Plan en validación.</p></div>
+  {% elif not c.plan_visible %}
+  <div class="tarjeta"><p class="vacio">Sin plan día por día en la sección del torneo del vault.</p></div>
+  {% else %}
+  <div class="tarjeta">
+    {% if plan_hoy %}{{ dia_plan(plan_hoy, hoy) }}{% else %}<p class="vacio">Hoy no está en el plan ({{ c.plan[0].fecha|fecha_corta }} a {{ c.plan[-1].fecha|fecha_corta }}).</p>{% endif %}
+    <details class="plan-completo">
+      <summary>Ver los {{ c.plan|length }} días</summary>
+      {% for p in c.plan %}{{ dia_plan(p, hoy) }}{% endfor %}
+    </details>
+  </div>
+  {% endif %}
+</section>
+
+<section id="pesajes" aria-labelledby="t-pesajes"><h2 id="t-pesajes">Pesajes</h2>
+  <div class="tarjeta">
+    {% if ultimo %}
+    <p class="cifra-tarjeta">{{ ultimo.peso_g|decimal(2) }}<span class="unidad">kg</span></p>
+    <p class="tenue">{{ ultimo.fecha|fecha_corta }}{% if ultimo.hora %}, {{ ultimo.hora }}{% endif %}{% if frente %} · {{ frente }}{% endif %}</p>
+    {% else %}<p class="vacio">Sin pesajes todavía.</p>{% endif %}
+    {% if proximo %}<p class="tenue">Próximo pesaje en casa: {{ "hoy" if proximo == hoy else proximo|fecha_larga }}.</p>{% endif %}
+    {% if grafica %}
+    <div id="g-pesajes" class="grafica" role="img" aria-label="Pesajes en kg{% if c.limite_g %}, con el límite de {{ c.limite_g|decimal(1) }} kg{% endif %}{% if meta %} y la meta de {{ meta.meta_g|decimal(1) }} kg el {{ meta.fecha|fecha_corta }}{% endif %}"></div>
+    <script type="application/json" id="g-pesajes-datos">{{ grafica|tojson }}</script>
+    {% endif %}
+    {% if referencia %}<p class="tenue nota-ref">Referencia aparte: {{ referencia.g|decimal(2) }} kg el {{ referencia.fecha|fecha_corta }}{% if referencia.metodo %} · {{ referencia.metodo }}{% endif %}. Otra condición: no entra en la gráfica.</p>{% endif %}
+
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <details class="nuevo-pesaje"{% if error or not ultimo %} open{% endif %}>
+      <summary>{{ icono("plus", 18) }} Pesaje</summary>
+      <form method="post" action="/rendimiento/competencia/pesajes" class="form-pesaje">
+        <div class="campos-pesaje">
+          <div><label for="p-peso">Peso (kg)</label>
+            <input id="p-peso" name="peso" inputmode="decimal" autocomplete="off" required placeholder="77,4" class="cifra" value="{{ form.get('peso', '') }}"></div>
+          <div><label for="p-fecha">Fecha</label>
+            <input id="p-fecha" type="date" name="fecha" value="{{ form.get('fecha') or hoy.isoformat() }}" max="{{ hoy.isoformat() }}"></div>
+          <div><label for="p-hora">Hora</label><input id="p-hora" type="time" name="hora" value="{{ form.get('hora', '') }}"></div>
+        </div>
+        <fieldset class="chips-check">
+          <legend>Cómo</legend>
+          {% for k, v in CONDICIONES.items() %}<label><input type="radio" name="condicion" value="{{ k }}"{% if form.get('condicion', 'ropa_interior') == k %} checked{% endif %}>{{ v }}</label>{% endfor %}
+        </fieldset>
+        <label for="p-nota">Nota <span class="tenue">(opcional)</span></label>
+        <input id="p-nota" name="nota" maxlength="200" value="{{ form.get('nota', '') }}">
+        <button type="submit">Guardar pesaje</button>
+      </form>
+    </details>
+    {% if pesajes %}
+    <details>
+      <summary>Todos los pesajes ({{ pesajes|length }})</summary>
+      <div class="r-filas">
+      {% for p in pesajes|reverse %}
+        <form method="post" action="/rendimiento/competencia/pesajes" class="fila-dato">
+          <input type="hidden" name="fecha" value="{{ p.fecha }}">
+          <span class="tenue">{{ p.fecha|fecha_corta }}</span>
+          <span><b class="cifra">{{ p.peso_g|decimal(2) }} kg</b><small class="tenue">{{ CONDICIONES.get(p.condicion, "") }}{% if p.hora %} · {{ p.hora }}{% endif %}{% if p.nota %} · {{ p.nota }}{% endif %}</small></span>
+          <button type="submit" name="accion" value="borrar" class="icono-solo secundario" aria-label="Borrar el pesaje del {{ p.fecha|fecha_corta }}" onclick="return confirm('¿Borrar el pesaje del {{ p.fecha|fecha_corta }}?')">{{ icono("trash", 18) }}</button>
+        </form>
+      {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+  </div>
+</section>
+
+<section aria-labelledby="t-guion"><h2 id="t-guion">Guion de combate</h2>
+  {% if c.guion %}
+  <div class="guion" role="list" tabindex="0" aria-label="Guion de combate">
+    {% for t in c.guion %}
+    <article class="tarjeta t-guion" role="listitem"><h3>{{ t.titulo }}</h3><p>{{ t.texto[:1]|upper }}{{ t.texto[1:] }}</p></article>
+    {% endfor %}
+  </div>
+  {% else %}<div class="tarjeta"><p class="vacio">Sin guion de combate en la sección del torneo del vault.</p></div>{% endif %}
+</section>
+
+<section id="checklist" aria-labelledby="t-check"><h2 id="t-check">Checklist del día</h2>
+  {% include "rendimiento/_checklist.html" %}
+</section>
+{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+{% if c and grafica %}
+<script>
+  Rendimiento.pesajes("g-pesajes", { limite: {{ c.limite_g or "null" }}{% if meta %}, meta: {{ meta.meta_g }}, metaFecha: {{ meta.fecha.isoformat()|tojson }}{% endif %} });
+</script>
+{% endif %}
+{% endblock %}

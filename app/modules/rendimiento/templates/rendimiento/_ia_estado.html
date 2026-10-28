@@ -1,0 +1,28 @@
+{% from "_iconos.html" import icono %}
+{% set corriendo = t and t.estado in ("en_cola", "corriendo") %}
+<div id="estado" class="ia-estado" role="status" aria-live="polite" {% if corriendo %}hx-get="/rendimiento/ia/estado/{{ t.id }}" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+  {% if corriendo %}
+  <div class="tarjeta pensando">
+    {{ icono("arrows-clockwise", 22, "girando") }}
+    <div>
+      {% if t.tipo == "imagen" %}
+      <p><b>Generando la imagen proyectada…</b></p>
+      <p class="tenue">Codex está trabajando; podrás lanzar un análisis cuando termine. <a href="/rendimiento/imagen/{{ t.id }}">Ver el progreso</a></p>
+      {% elif t.tipo == "rellenar_salud" %}
+      <p><b>Trayendo Body Battery y fases de sueño…</b></p>
+      <p class="tenue">Claude pide a Garmin los últimos 60 días y los escribe en archivos nuevos del vault. Puede tardar varios minutos.</p>
+      {% elif es_analisis %}
+      <p><b>Pensando…</b> {{ item.nombre }}: {{ item.que }}.</p>
+      <p class="tenue">Claude está leyendo tus datos y el vault, sin escribir nada. Suele tardar de 1 a 5 minutos; puedes salir de esta pantalla y volver.</p>
+      {% else %}
+      <p><b>Sincronizando sensores…</b></p>
+      <p class="tenue">Cuando termine podrás lanzar un análisis.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% elif t and es_analisis and t.estado == "fallido" %}
+  <p class="aviso mal" role="alert">{{ item.nombre }} falló: {{ t.error }} <a href="/rendimiento/ia/{{ t.id }}">Ver el registro</a></p>
+  {% elif t and es_analisis and t.estado == "listo" %}
+  <p class="aviso bien">{{ item.nombre }} terminó. <a href="/rendimiento/ia/{{ t.id }}">Ver el análisis</a></p>
+  {% endif %}
+</div>

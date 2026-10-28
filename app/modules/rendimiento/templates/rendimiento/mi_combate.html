@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Mi combate{% endblock %}
+{% block ancho %} amplio{% endblock %}
+
+{% macro barras(items, total) -%}
+<ul class="barras-h">
+  {% for nombre, n in items %}
+  <li><span class="nombre">{{ nombre }}</span><span class="barra-par"><i class="barra-b" style="width: {{ (n * 100 / total)|round(1) if total else 0 }}%"></i></span><b class="cifra">{{ n }}</b></li>
+  {% endfor %}
+</ul>
+{%- endmacro %}
+
+{% block contenido %}
+<div class="r mi-combate">
+<p><a href="/rendimiento/analisis">{{ icono("arrow-left", 18) }} Análisis</a></p>
+<h1>Mi combate</h1>
+<p class="suave">Qué trabajas, qué te funciona y qué te falta, según lo que registras en cada sesión.</p>
+
+<nav class="filtros" aria-label="Filtros">
+  <div class="chips-botones">
+    {% for k, (nombre, _) in PERIODOS.items() %}
+    <a class="chip-tipo{% if k == periodo %} activo{% endif %}" href="?periodo={{ k }}&disciplina={{ disciplina }}" {% if k == periodo %}aria-current="page"{% endif %}>{{ nombre }}</a>
+    {% endfor %}
+  </div>
+  <div class="chips-botones">
+    {% for k, nombre in DISCIPLINAS.items() %}
+    <a class="chip-tipo{% if k == disciplina %} activo{% endif %}" href="?periodo={{ periodo }}&disciplina={{ k }}" {% if k == disciplina %}aria-current="page"{% endif %}>{{ nombre }}</a>
+    {% endfor %}
+  </div>
+</nav>
+
+{% if not p.sesiones %}
+<div class="tarjeta"><p class="vacio">Sin sesiones de combate en este período. Registra una en Registrar, Combate.</p></div>
+{% else %}
+<div class="mosaico-combate">
+  <section class="tarjeta t-foco entra-r b-resumen">
+    <header><span>Período</span></header>
+    <div class="par cifras-resumen">
+      <span><span class="cifra-tarjeta" data-contar="{{ p.sesiones * 1000 }}">{{ p.sesiones }}</span><span class="tenue">sesiones</span></span>
+      <span><span class="cifra-tarjeta" data-contar="{{ p.minutos * 1000 }}">{{ p.minutos }}</span><span class="tenue">minutos</span></span>
+    </div>
+    {% if p.bloques_min %}<p class="etiqueta-bloque">Minutos por tipo de bloque</p>{{ barras(p.bloques_min, p.bloques_min[0][1]) }}{% endif %}
+  </section>
+
+  <section class="tarjeta t-foco entra-r b-tecnicas" aria-labelledby="h-tec">
+    <header><span id="h-tec">Técnicas más trabajadas</span><span class="tenue">veces registradas</span></header>
+    {% if p.tecnicas %}
+    <ul class="barras-h">
+      {% for t in p.tecnicas[:10] %}
+      <li><span class="nombre">{{ t.nombre }}<small class="tenue">{{ t.familia }}</small></span>
+        <span class="barra-par"><i class="barra-b" style="width: {{ (t.veces * 100 / p.tecnicas[0].veces)|round(1) }}%"></i></span><b class="cifra">{{ t.veces }}</b></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vacio">Sin técnicas del catálogo todavía.</p>{% endif %}
+  </section>
+
+  <section class="tarjeta t-foco entra-r b-resultado" aria-labelledby="h-res">
+    <header><span id="h-res">Funcionó y no funcionó</span><span class="tenue">randori y situacional</span></header>
+    {% if p.con_resultado or p.situaciones_resultado %}
+    <ul class="resultados">
+      {% for t in p.con_resultado %}
+      <li>
+        <div class="fila-res"><span class="nombre">{{ t.nombre }}</span><span class="cifra">{{ t.pct_funciono }} % funcionó</span></div>
+        <div class="barra-res" role="img" aria-label="{{ t.nombre }}: funcionó {{ t.funciono }}, no funcionó {{ t.no_funciono }}">
+          <i class="si" style="flex: {{ t.funciono }}"></i><i class="no" style="flex: {{ t.no_funciono }}"></i></div>
+        <small class="tenue">Funcionó {{ t.funciono }} · No funcionó {{ t.no_funciono }}</small>
+      </li>
+      {% endfor %}
+      {% for nombre, (si, no) in p.situaciones_resultado.items() if si or no %}
+      <li>
+        <div class="fila-res"><span class="nombre">{{ nombre }} <small class="tenue">situación</small></span><span class="cifra">{{ (100 * si / (si + no))|round|int }} % funcionó</span></div>
+        <div class="barra-res" role="img" aria-label="{{ nombre }}: funcionó {{ si }}, no funcionó {{ no }}"><i class="si" style="flex: {{ si }}"></i><i class="no" style="flex: {{ no }}"></i></div>
+        <small class="tenue">Funcionó {{ si }} · No funcionó {{ no }}</small>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vacio">Marca "Funcionó" o "No funcionó" en tus bloques de randori o situacional.</p>{% endif %}
+  </section>
+
+  <section class="tarjeta t-foco entra-r b-situaciones" aria-labelledby="h-sit">
+    <header><span id="h-sit">Situaciones más frecuentes</span></header>
+    {% if p.situaciones %}{{ barras(p.situaciones, p.situaciones[0][1]) }}{% else %}<p class="vacio">Sin situaciones registradas.</p>{% endif %}
+    {% if p.familias %}<p class="etiqueta-bloque">Familias</p>{{ barras(p.familias, p.familias[0][1]) }}{% endif %}
+    {% if p.rivales %}<p class="etiqueta-bloque">Contra quién</p>{{ barras(p.rivales, p.rivales[0][1]) }}{% endif %}
+  </section>
+</div>
+{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script>Rendimiento.animarEntrada();</script>{% endblock %}

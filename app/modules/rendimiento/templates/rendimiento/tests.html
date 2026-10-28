@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Tests{% endblock %}
+{% block ancho %} amplio{% endblock %}
+
+{% macro delta_chip(d, unidad, texto="") -%}
+{%- if d -%}
+<span class="delta {{ d.clase }}">{{ icono("arrow-up-right" if d.sube else "arrow-down-right", 14) if d.valor != 0 else "" }}{{ d|delta_txt(unidad) }}{% if d.pct_mil is not none %}<span class="pct">{{ d.signo }}{{ d.pct_mil|pct_delta }}</span>{% endif %}</span>{% if texto %} <span class="tenue">{{ texto }}</span>{% endif %}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro fecha_m(m) -%}{{ m.fecha|fecha_test(m.precision, m.aproximada) }}{%- endmacro %}
+
+{% block contenido %}
+<div class="r tests">
+<div class="cabecera r-cab">
+  <div><h1>Tests</h1><p class="suave">Evolución de tus evaluaciones del gimnasio.</p></div>
+  <a href="/rendimiento/tests/nuevo" class="secundario">{{ icono("plus", 20) }}<span>Registrar test</span></a>
+</div>
+
+{% if not meds %}
+<div class="tarjeta"><p class="vacio">Todavía no hay tests. Registra el primero o carga tus resultados con <code>make cargar-tests</code>.</p></div>
+{% else %}
+<div class="mosaico-tests">
+
+  {# CMJ: cifra hero y evolución #}
+  <section class="tarjeta t-foco entra-r b-cmj" id="t-cmj" aria-labelledby="h-cmj">
+    <header><span id="h-cmj">Salto con contramovimiento (CMJ)</span><span class="tenue">{{ cmj.n if cmj else 0 }} medicion{{ "es" if not cmj or cmj.n != 1 }}</span></header>
+    {% if cmj %}
+    {% set u = cmj.ultimo %}
+    <p class="cifra-hero r-hero"><span data-contar="{{ u[1].valor_mil }}" data-decimales="2">{{ u[1].valor_mil|decimal }}</span><span class="unidad">cm</span></p>
+    <p class="linea-delta">
+      {{ delta_chip(cmj.delta, "cm", "frente a " ~ fecha_m(cmj.anterior[0])) if cmj.anterior else "" }}
+    </p>
+    <p class="tenue">
+      Última: {{ fecha_m(u[0]) }}.
+      {% if cmj.frente_mejor %}Mejor: {{ cmj.mejor[1].valor_mil|decimal }} cm ({{ fecha_m(cmj.mejor[0]) }}), {{ cmj.frente_mejor|delta_txt("cm") }} frente al mejor.
+      {% else %}Es tu mejor marca.{% endif %}
+    </p>
+    <div id="g-cmj" class="grafica-test" role="img" aria-label="CMJ por fecha: {% for p in graficas.cmj %}{{ p.fecha }} {{ p.v|decimal }} cm{% if not loop.last %}; {% endif %}{% endfor %}"></div>
+    <script type="application/json" id="g-cmj-datos">{{ graficas.cmj|tojson }}</script>
+    {% else %}<p class="vacio">Sin CMJ todavía.</p>{% endif %}
+  </section>
+
+  {# Radar #}
+  <section class="tarjeta t-foco entra-r b-radar" aria-labelledby="h-radar">
+    <header><span id="h-radar">Perfil</span><span class="tenue">100 = tu mejor marca</span></header>
+    {% if radar|length >= 3 %}
+    <div id="g-radar" class="grafica-radar" role="img" aria-label="Perfil de tests, última medición frente a la anterior, en porcentaje de tu mejor marca"></div>
+    <script type="application/json" id="g-radar-datos">[{% for d in radar %}{"nombre": {{ d.nombre|tojson }}, "pa": {{ d.pct_anterior }}, "pu": {{ d.pct_ultima }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
+    <table class="tabla-radar">
+      <thead><tr><th>Test</th><th class="num">Anterior</th><th class="num">Última</th><th class="num">Mejor</th></tr></thead>
+      <tbody>
+      {% for d in radar %}
+      <tr><td>{{ d.nombre }}</td><td class="num">{{ d.anterior[1]|decimal }}</td><td class="num">{{ d.ultima[1]|decimal }}</td><td class="num">{{ d.mejor_mil|decimal }} {{ d.unidad }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="vacio">El perfil aparece cuando haya al menos 3 tipos de test con 2 fechas cada uno.</p>
+    {% endif %}
+  </section>
+
+  {# Curva carga-velocidad #}
+  <section class="tarjeta t-foco entra-r b-curva" id="t-carga_velocidad" aria-labelledby="h-curva">
+    <header><span id="h-curva">Curva carga-velocidad, sentadilla</span><span class="tenue">velocidad media propulsiva</span></header>
+    {% if graficas.curvas %}
+    <div id="g-curva" class="grafica-test alta" role="img" aria-label="Curvas carga-velocidad por fecha: {% for c in graficas.curvas %}{{ c.fecha }}: {% for p in c.puntos %}{{ p[0] }} kg {{ p[1]|decimal }} m/s{% if not loop.last %}, {% endif %}{% endfor %}{% if not loop.last %}; {% endif %}{% endfor %}"></div>
+    <script type="application/json" id="g-curva-datos">{{ graficas.curvas|tojson }}</script>
+    {% set c1 = graficas.curvas[0] %}{% set c2 = graficas.curvas[-1] %}
+    {% if graficas.curvas|length > 1 %}
+    <p class="tenue">A más velocidad con la misma carga, mejor. La línea clara es la última ({{ c2.fecha|fecha_test }}).</p>
+    {% endif %}
+    {% else %}<p class="vacio">Sin curva carga-velocidad todavía.</p>{% endif %}
+  </section>
+
+  {# Dinamometría #}
+  <section class="tarjeta t-foco entra-r b-dina" id="t-dinamometria" aria-labelledby="h-dina">
+    <header><span id="h-dina">Dinamometría manual</span><span class="tenue">mano dominante</span></header>
+    {% if dina %}
+    <p class="cifra-tarjeta grande"><span data-contar="{{ dina.ultimo[1].valor_mil }}" data-decimales="1">{{ dina.ultimo[1].valor_mil|decimal }}</span><span class="unidad">kg</span></p>
+    <p class="linea-delta">{{ delta_chip(dina.delta, "kg", "frente a la anterior") if dina.anterior else "" }}</p>
+    <div id="g-dina" class="grafica-test" role="img" aria-label="Dinamometría por fecha: {% for p in graficas.dina %}{{ p.fecha }} {{ p.v|decimal }} kg{% if not loop.last %}; {% endif %}{% endfor %}"></div>
+    <script type="application/json" id="g-dina-datos">{{ graficas.dina|tojson }}</script>
+    {% if dina.frente_mejor %}<p class="tenue">Mejor: {{ dina.mejor[1].valor_mil|decimal }} kg ({{ fecha_m(dina.mejor[0]) }}).</p>{% endif %}
+    {% else %}<p class="vacio">Sin dinamometría todavía.</p>{% endif %}
+  </section>
+
+  {# Small multiples #}
+  <section class="b-multiples" aria-labelledby="h-multiples">
+    <h2 id="h-multiples">Otras medidas</h2>
+    <div class="multiples">
+      {% for clave, titulo, unidad, res, color in [("seis", "Test de 6 min en banda", "km", seis, "--r-cardio"), ("peso", "Peso", "kg", peso, "--tinta"), ("cintura", "Perímetro de cintura", "cm", cintura, "--r-otro")] %}
+      <article class="tarjeta t-dato entra-r multiple">
+        <header><span>{{ titulo }}</span></header>
+        {% if res %}
+        <p class="cifra-tarjeta"><span data-contar="{{ res.ultimo[1].valor_mil }}" data-decimales="2">{{ res.ultimo[1].valor_mil|decimal }}</span><span class="unidad">{{ unidad }}</span></p>
+        <div id="g-{{ clave }}" class="grafica-mini" role="img" aria-label="{{ titulo }} por fecha: {% for p in graficas[clave] %}{{ p.fecha }} {{ p.v|decimal }} {{ unidad }}{% if not loop.last %}; {% endif %}{% endfor %}"></div>
+        <script type="application/json" id="g-{{ clave }}-datos">{{ graficas[clave]|tojson }}</script>
+        <footer>{{ delta_chip(res.delta, unidad, "frente a la anterior") if res.anterior else "" }}<span class="tenue">{{ fecha_m(res.ultimo[0]) }}{% if res.ultimo[0].metodo %} · {{ res.ultimo[0].metodo }}{% endif %}</span></footer>
+        {% else %}<p class="vacio">Sin dato.</p>{% endif %}
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# Comparar dos fechas #}
+  <section class="tarjeta b-comparar" aria-labelledby="h-comparar">
+    <header class="t-cab"><h2 id="h-comparar">Comparar dos fechas</h2></header>
+    <form method="get" action="/rendimiento/tests/comparar" class="form-comparar"
+          hx-get="/rendimiento/tests/comparar" hx-trigger="change" hx-target="#comparacion" hx-select="#comparacion" hx-swap="outerHTML">
+      <label for="c-tipo">Test</label>
+      <select id="c-tipo" name="tipo">
+        {% for t in por_tipo %}<option value="{{ t }}" {% if t == (tipo_comp or "cmj") %}selected{% endif %}>{{ NOMBRES_TIPO[t] }}</option>{% endfor %}
+      </select>
+      <noscript><button type="submit" class="secundario">Comparar</button></noscript>
+    </form>
+    {% include "rendimiento/_comparar_tests.html" %}
+  </section>
+
+  {# Historial #}
+  <section class="tarjeta b-historial" aria-labelledby="h-historial">
+    <header class="t-cab"><h2 id="h-historial">Historial</h2></header>
+    <ul class="historial">
+      {% for m in meds|reverse %}
+      <li>
+        <span class="info"><span>{{ m.nombre }}</span>
+          <small class="tenue">{{ fecha_m(m) }}{% if m.metodo %} · {{ m.metodo }}{% endif %}{% if m.evaluador %} · {{ m.evaluador }}{% endif %}</small>
+          {% if m.notas %}<small class="tenue">{{ m.notas }}</small>{% endif %}</span>
+        <span class="tipo{% if m.origen == 'vault' %} estimado{% endif %}">{{ "vault" if m.origen == "vault" else ("app" if m.origen == "app" else "archivo") }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  Rendimiento.evolucion("g-cmj", { unidad: "cm" });
+  Rendimiento.radar("g-radar");
+  Rendimiento.curvas("g-curva");
+  Rendimiento.barras("g-dina", { unidad: "kg", color: "--r-fuerza" });
+  Rendimiento.mini("g-seis", { unidad: "km", color: "--r-cardio" });
+  Rendimiento.mini("g-peso", { unidad: "kg" });
+  Rendimiento.mini("g-cintura", { unidad: "cm", color: "--r-otro" });
+  Rendimiento.animarEntrada();
+</script>
+{% endblock %}

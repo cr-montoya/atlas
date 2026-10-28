@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Análisis con Claude{% endblock %}
+{% block ancho %} amplio{% endblock %}
+
+{% macro ultimo_de(tipo) -%}
+{% set u = ultimos.get(tipo) %}
+{% if u %}<p class="tenue ultimo-ia">Último: <a href="/rendimiento/ia/{{ u.id }}">{{ u.fin[:10]|fecha_corta }}</a></p>{% endif %}
+{%- endmacro %}
+
+{% block contenido %}
+<div class="r ia">
+<p><a href="/rendimiento/analisis">{{ icono("arrow-left", 18) }} Análisis</a></p>
+<h1>Análisis con Claude</h1>
+<p class="suave">Claude lee tus datos de la app y el vault, sin escribir nada. Las recomendaciones van marcadas [I] y no reemplazan a tu entrenador, fisio, nutricionista ni ortopedista.</p>
+
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+{% include "rendimiento/_ia_estado.html" %}
+
+<div class="mosaico-ia">
+  <section class="tarjeta t-ia" aria-labelledby="h-semana">
+    <header class="t-cab">{{ icono("pulse", 20, "c-cardio") }}<h2 id="h-semana">Analiza mi semana</h2></header>
+    <p class="tenue">Qué ajustar en volumen, intensidad y recuperación, frente a la semana anterior.</p>
+    <form method="post" action="/rendimiento/ia/semana">
+      <label for="ia-semana">Semana</label>
+      <select id="ia-semana" name="semana">
+        {% for s in semanas_op %}<option value="{{ s }}" {% if s == semana %}selected{% endif %}>{{ etiquetas[s] }}</option>{% endfor %}
+      </select>
+      <button type="submit" class="secundario" data-texto-envio="Lanzando…" {% if ocupado or demo %}disabled{% endif %}>Analizar semana</button>
+      {% if demo %}<small class="no-demo">No disponible en la demo</small>{% endif %}
+    </form>
+    {{ ultimo_de("analisis_semana") }}
+  </section>
+
+  <section class="tarjeta t-ia" aria-labelledby="h-combate">
+    <header class="t-cab">{{ icono("hand-fist", 20, "c-judo") }}<h2 id="h-combate">Analiza mi combate</h2></header>
+    <p class="tenue">Qué repites, qué te funciona y qué te falta, según tus registros de combate.</p>
+    <form method="post" action="/rendimiento/ia/combate">
+      <div class="dos">
+        <div><label for="ia-n">Últimas sesiones</label>
+          <select id="ia-n" name="n">{% for k in N_COMBATE %}<option value="{{ k }}" {% if k == n %}selected{% endif %}>{{ k }}</option>{% endfor %}</select></div>
+        <div><label for="ia-disc">Disciplina</label>
+          <select id="ia-disc" name="disciplina">{% for k, v in DISCIPLINAS.items() %}<option value="{{ k }}" {% if k == disciplina %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+      </div>
+      <label for="ia-ref">Referente (opcional)</label>
+      <input id="ia-ref" name="referente" list="referentes" value="{{ referente }}" autocomplete="off" maxlength="80" placeholder="Sanshiro Murao">
+      <datalist id="referentes">{% for r in REFERENTES %}<option value="{{ r }}">{% endfor %}</datalist>
+      <button type="submit" class="secundario" data-texto-envio="Lanzando…" {% if ocupado or demo %}disabled{% endif %}>Analizar combate</button>
+      {% if demo %}<small class="no-demo">No disponible en la demo</small>{% endif %}
+    </form>
+    {{ ultimo_de("analisis_combate") }}
+  </section>
+
+  <section class="tarjeta t-ia" aria-labelledby="h-fotos">
+    <header class="t-cab">{{ icono("person-simple-run", 20, "c-fuerza") }}<h2 id="h-fotos">Compara mis fotos</h2></header>
+    <p class="tenue">Observaciones sobre dos fotos de la misma pose y las medidas más cercanas. No son diagnósticos.</p>
+    <nav class="chips-botones" aria-label="Pose">
+      {% for k, v in POSES.items() %}
+      <a class="chip-tipo{% if k == pose %} activo{% endif %}" href="?pose={{ k }}#h-fotos" {% if k == pose %}aria-current="page"{% endif %}>{{ v }}<span class="tenue conteo">{{ conteo.get(k, 0) }}</span></a>
+      {% endfor %}
+    </nav>
+    {% if fotos_pose|length < 2 %}
+    <p class="vacio">Necesitas dos fotos de {{ POSES[pose]|lower }}. <a href="/rendimiento/fotos/nueva?pose={{ pose }}">Agregar fotos</a></p>
+    {% else %}
+    <form method="post" action="/rendimiento/ia/fotos">
+      <input type="hidden" name="pose" value="{{ pose }}">
+      <div class="dos">
+        {% for nombre, actual, etiqueta in [("a", fa, "Antes"), ("b", fb, "Después")] %}
+        <div><label for="ia-f{{ nombre }}">{{ etiqueta }}</label>
+          <select id="ia-f{{ nombre }}" name="{{ nombre }}">
+            {% for f in fotos_pose %}<option value="{{ f.id }}" {% if actual and f.id == actual.id %}selected{% endif %}>{{ f.fecha|fecha_corta }}</option>{% endfor %}
+          </select></div>
+        {% endfor %}
+      </div>
+      <label class="check confirmar-envio"><input type="checkbox" name="confirmo" value="1" required> Acepto enviar estas dos fotos a Anthropic (Claude) para este análisis</label>
+      <p class="tenue">Las fotos solo salen del portátil con esta confirmación, y el envío queda registrado en el análisis.</p>
+      <button type="submit" class="secundario" data-texto-envio="Lanzando…" {% if ocupado or demo %}disabled{% endif %}>Comparar fotos</button>
+      {% if demo %}<small class="no-demo">No disponible en la demo</small>{% endif %}
+    </form>
+    {% endif %}
+    {{ ultimo_de("comparar_fotos") }}
+  </section>
+</div>
+
+{% if not relleno.listo %}
+<section class="tarjeta t-ia relleno-salud" aria-labelledby="h-relleno">
+  <header class="t-cab">{{ icono("heartbeat", 20, "c-muaythai") }}<h2 id="h-relleno">Datos del reloj de días anteriores</h2></header>
+  <p class="tenue">Una sola vez: trae de Garmin el Body Battery, las fases de sueño y la línea base de HRV de los últimos 60 días, en archivos nuevos. No cambia los que ya existen.</p>
+  {% if relleno.ultimo and relleno.ultimo.estado == "fallido" %}<p class="aviso mal" role="alert">La última vez falló: {{ relleno.ultimo.error }}</p>{% endif %}
+  <form method="post" action="/rendimiento/ia/rellenar-salud">
+    <button type="submit" class="secundario" data-texto-envio="Lanzando…" {% if ocupado or demo %}disabled{% endif %}>Traer Body Battery y fases de sueño (60 días)</button>
+    {% if demo %}<small class="no-demo">No disponible en la demo</small>{% endif %}
+  </form>
+</section>
+{% endif %}
+
+<h2>Análisis anteriores</h2>
+<div class="tarjeta r-filas">
+  {% for h in historial %}
+  <a class="fila-enlace fila-ia" href="/rendimiento/ia/{{ h.t.id }}">
+    <span>{{ h.nombre }}<small class="tenue">{{ h.que }}</small></span>
+    <span class="tenue">{% if h.t.estado == "listo" %}{{ (h.t.fin or h.t.creado)[:10]|fecha_corta }}{% elif h.t.estado == "fallido" %}Falló{% else %}Pensando…{% endif %}</span>
+  </a>
+  {% else %}
+  <p class="vacio">Todavía no has pedido ningún análisis.</p>
+  {% endfor %}
+</div>
+</div>
+{% endblock %}

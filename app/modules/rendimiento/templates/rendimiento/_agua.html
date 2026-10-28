@@ -1,0 +1,11 @@
+{% from "_iconos.html" import icono %}
+{% set meta = plan.liquidos_ml if plan and plan.liquidos_ml else 3000 %}
+<div id="agua" class="agua">
+  <form method="post" action="/rendimiento/comidas/{{ dia.fecha }}" hx-post="/rendimiento/comidas/{{ dia.fecha }}" hx-target="#agua" hx-swap="outerHTML" class="contador">
+    <button type="submit" name="agua" value="-1" class="secundario mas-menos" aria-label="Un vaso menos" {% if not dia.agua_vasos %}disabled{% endif %}>{{ icono("minus", 20) }}</button>
+    <p class="cifra-agua" aria-live="polite"><b class="cifra">{{ dia.agua_vasos or 0 }}</b> vasos
+      <small class="tenue">{{ ((dia.agua_vasos or 0) * VASO_ML)|decimal(1) }} de {{ meta|decimal(1) }} L</small></p>
+    <button type="submit" name="agua" value="1" class="secundario mas-menos" aria-label="Un vaso más">{{ icono("plus", 20) }}</button>
+  </form>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+</div>

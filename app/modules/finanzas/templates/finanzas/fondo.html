@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "finanzas/_macros.html" import estimado %}
+{% block titulo %}{{ f.nombre if f else "Nuevo fondo" }}{% endblock %}
+{% block contenido %}
+{% set v = valores %}
+<p><a href="/futuro#t-fondos">Futuro</a></p>
+<h1>{{ f.nombre if f else "Nuevo fondo de previsión" }}</h1>
+{% if ok == "guardado" %}<p class="aviso bien" role="status">Fondo guardado.</p>{% elif ok == "uso" %}<p class="aviso bien" role="status">Uso registrado.</p>{% endif %}
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+{% if estado %}
+<section class="tarjeta">{% set x = estado %}{% include "finanzas/_fondo_fila.html" %}</section>
+{% endif %}
+<form class="tarjeta" method="post" action="/fondos{% if f %}/{{ f.id }}{% endif %}">
+  <label for="f-nombre">Nombre</label>
+  <input id="f-nombre" name="nombre" type="text" required autocomplete="off" value="{{ v.get('nombre', f.nombre if f else '') }}" placeholder="SOAT">
+  <div class="dos">
+    <div><label for="f-obj">Monto objetivo</label>
+      <input id="f-obj" name="objetivo" class="monto" type="text" inputmode="numeric" autocomplete="off" value="{{ v.get('objetivo', f.objetivo|cop if f else '') }}" placeholder="343.300"></div>
+    <div><label for="f-fecha">Fecha objetivo</label>
+      <input id="f-fecha" name="fecha_objetivo" type="date" value="{{ v.get('fecha_objetivo', f.fecha_objetivo or '' if f else '') }}"></div>
+  </div>
+  <div class="dos">
+    <div><label for="f-cada">Se repite cada (meses)</label>
+      <input id="f-cada" name="cada_meses" type="number" inputmode="numeric" min="1" max="60" value="{{ v.get('cada_meses', f.cada_meses or '' if f else '') }}" placeholder="12"></div>
+    <div><label for="f-bols">Bolsillo</label>
+      <select id="f-bols" name="bolsillo_id">{% for b in bolsillos %}<option value="{{ b.id }}" {% if (v.get('bolsillo_id') or (f.bolsillo_id|string if f else '')) == b.id|string %}selected{% endif %}>{{ b.nombre }}</option>{% endfor %}</select></div>
+  </div>
+  <label class="check"><input type="checkbox" name="estimado" value="1" {% if v.get('estimado') or (f and f.estimado) %}checked{% endif %}> El monto es estimado</label>
+  <details {% if f and f.aporte_mensual %}open{% endif %}>
+    <summary>Aporte fijo{% if not demo %} (como la natillera){% endif %}</summary>
+    <p class="tenue">Con aporte fijo el fondo no se provisiona solo: lo alimenta una línea de la plantilla y en su fecha devuelve lo acumulado. No cuenta como colchón.</p>
+    <div class="dos">
+      <div><label for="f-aporte">Aporte cada 30</label>
+        <input id="f-aporte" name="aporte_mensual" class="monto" type="text" inputmode="numeric" autocomplete="off" value="{{ v.get('aporte_mensual', f.aporte_mensual|cop if f else '0') }}"></div>
+      <div><label for="f-prox">Aporte del ciclo siguiente</label>
+        <input id="f-prox" name="aporte_proximo" class="monto" type="text" inputmode="numeric" autocomplete="off" value="{{ v.get('aporte_proximo', (f.aporte_proximo|cop) if f and f.aporte_proximo is not none else '') }}" placeholder="150.000"></div>
+    </div>
+  </details>
+  <button type="submit" class="secundario" style="width:100%;margin-top:0.75rem">Guardar fondo</button>
+</form>
+{% if f %}
+<form class="tarjeta" method="post" action="/fondos/{{ f.id }}/uso">
+  <h2 style="margin-top:0">Registrar uso{% if f.aporte_mensual %} o devolución{% endif %}</h2>
+  {% if error_uso %}<p class="error" role="alert">{{ error_uso }}</p>{% endif %}
+  <div class="dos">
+    <div><label for="u-fecha">Fecha</label><input id="u-fecha" name="fecha" type="date" value="{{ hoy }}" required></div>
+    <div><label for="u-monto">Monto</label><input id="u-monto" name="monto" class="monto" type="text" inputmode="numeric" autocomplete="off" required value="{{ (estado.f.acumulado|cop) if estado and estado.f.acumulado > 0 else '' }}"></div>
+  </div>
+  <label for="u-nota">Nota (opcional)</label><input id="u-nota" name="nota" type="text" autocomplete="off">
+  {% if f.cada_meses %}<p class="tenue">Al registrarlo, la fecha objetivo pasa al siguiente ciclo ({{ f.cada_meses }} meses){% if f.aporte_proximo is not none %} y el aporte pasa a {{ f.aporte_proximo|cop }}{% endif %}.</p>{% endif %}
+  <button type="submit" class="primario">Registrar uso</button>
+</form>
+<section class="tarjeta" aria-labelledby="t-fm">
+  <h2 id="t-fm" style="margin-top:0">Movimientos</h2>
+  {% if movs %}<ul class="filas">{% for m in movs %}
+    <li><span class="nombre"><span>{{ "Aporte" if m.tipo == "aporte" else "Uso" }} · {{ m.fecha|fecha_corta }}</span>{% if m.nota %}<small>{{ m.nota }}</small>{% endif %}</span>
+      <span class="monto cifra">{{ "+" if m.tipo == "aporte" else "-" }}{{ m.monto|cop }}</span></li>{% endfor %}</ul>
+  {% else %}<p class="vacio">Sin movimientos. Los aportes llegan al confirmar cada quincena.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

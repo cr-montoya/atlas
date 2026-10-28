@@ -1,0 +1,18 @@
+<section id="pvr" class="tarjeta" aria-labelledby="t-pvr"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <h2 id="t-pvr" style="margin-top:0">Planeado y real por bolsillo</h2>
+  <p class="tenue">Opcional: marca lo pagado o anota gastos rápidos. Lo que no registres queda "sin registrar".</p>
+  <ul class="filas">
+    {% for b in pvr %}
+    <li>
+      <span class="nombre"><span><span class="punto t-{{ b.tipo }}"></span> {{ b.nombre }}</span>
+        <small class="cifra">plan {{ b.planeado|cop }}{% if b.gastos %} · gastos rápidos {{ b.gastos|cop }}{% elif b.marcadas and b.marcadas < b.lineas %} · {{ b.marcadas }} de {{ b.lineas }} líneas{% endif %}</small></span>
+      <span class="monto">
+        {% if b.real is none %}<span class="tenue">sin registrar</span>
+        {% else %}<span class="cifra">{{ b.real|cop }}</span>
+          {% if b.diferencia %}<small class="cifra {{ 'neg' if b.diferencia < 0 else 'pos' }}" style="display:block">{{ "+" if b.diferencia > 0 else "" }}{{ b.diferencia|cop }}</small>{% endif %}
+        {% endif %}
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>

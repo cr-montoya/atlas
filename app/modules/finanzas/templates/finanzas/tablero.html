@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "finanzas/_macros.html" import tira, barra_meta, grafica_patrimonio %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Inicio{% endblock %}
+{% block contenido %}
+<section class="tarjeta" aria-labelledby="t-pago">
+  <h1 id="t-pago" class="titulo">{% if dias_para_pago == 0 %}Hoy es día de pago{% else %}Próximo pago en {{ dias_para_pago }} {{ "día" if dias_para_pago == 1 else "días" }}{% endif %}</h1>
+  <p class="suave">{{ pago|fecha_larga|capitalize }}, plantilla del {{ plantilla_pago }}.</p>
+  <div class="acciones" style="margin-top:0.5rem">
+    <a class="secundario" href="/quincena">Repartir quincena</a>
+    <a class="secundario" href="/gasto">{{ icono("plus", 20) }}Gasto</a>
+  </div>
+</section>
+
+<section aria-labelledby="t-ind">
+  <h2 id="t-ind">Indicadores de {{ ind.mes }}</h2>
+  <div class="tarjeta">
+    <ul class="filas">
+      <li><span class="nombre"><span>Tasa de ahorro</span><small>Ahorro y fondos sobre el ingreso del mes</small></span>
+        <span class="monto cifra">{% if ind.tasa_ahorro is none %}<span class="tenue">sin ingresos</span>{% else %}{{ ind.tasa_ahorro }} %{% endif %}</span></li>
+      <li><span class="nombre"><span>Colchón</span><small>Fondo de emergencia sobre {{ ind.gasto_basico|cop }} de gasto básico</small></span>
+        <span class="monto cifra">{% if ind.colchon_decimas is none %}<span class="tenue">sin datos</span>{% else %}{{ ind.colchon_decimas // 10 }},{{ ind.colchon_decimas % 10 }} meses{% endif %}</span></li>
+      <li><span class="nombre"><span>Deuda / ingreso</span><small>Pagos a deudas sobre el ingreso del mes</small></span>
+        <span class="monto cifra">{% if ind.deuda_ingreso is none %}<span class="tenue">sin ingresos</span>{% else %}{{ ind.deuda_ingreso }} %{% endif %}</span></li>
+      <li><span class="nombre"><span>Gasto libre</span><small>Real frente al tope del reparto</small></span>
+        <span class="monto cifra">{% if ind.real_libre is none %}<span class="tenue">sin registrar</span>{% else %}<span class="{{ 'neg' if ind.real_libre > ind.tope_libre else '' }}">{{ ind.real_libre|cop }}</span> de {{ ind.tope_libre|cop }}{% endif %}</span></li>
+    </ul>
+  </div>
+</section>
+
+<div class="rejilla">
+<section aria-labelledby="t-deudas">
+  <h2 id="t-deudas">Deudas</h2>
+  <div class="tarjeta">
+    {% if deudas %}
+    <ul class="filas">
+      {% for e in deudas %}
+      <li>
+        <a class="fila nombre" href="/deudas/{{ e.deuda.id }}">
+          <span>{{ e.deuda.nombre }}</span>
+          <small>{% if e.estimado %}En cero hacia el {{ e.estimado.fecha|fecha_corta }}{% if e.estimado.pocos_datos %} (pocos datos){% endif %}{% else %}Sin abonos recientes{% endif %}</small>
+        </a>
+        <span class="monto cifra">{{ e.deuda.saldo|moneda(e.deuda.moneda) }}{% if e.deuda.moneda == "USD" %} USD{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="vacio">Sin deudas pendientes.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section aria-labelledby="t-metas">
+  <h2 id="t-metas">Metas</h2>
+  <div class="tarjeta">
+    {% for m in metas %}{{ barra_meta(m) }}{% else %}<p class="vacio">Aún no hay metas. <a href="/metas">Crea una</a>.</p>{% endfor %}
+  </div>
+</section>
+</div>
+
+<section aria-labelledby="t-fondos">
+  <h2 id="t-fondos">Fondos de previsión</h2>
+  <div class="tarjeta">
+    {% for x in fondos %}{% include "finanzas/_fondo_fila.html" %}{% else %}<p class="vacio">Sin fondos. <a href="/fondos/nuevo">Crea uno</a>.</p>{% endfor %}
+  </div>
+</section>
+
+<section aria-labelledby="t-patrimonio">
+  <h2 id="t-patrimonio">Patrimonio neto</h2>
+  <div class="tarjeta">
+    {% if patrimonio %}
+    <p class="cifra-hero {{ 'neg' if patrimonio.neto < 0 else '' }}">{{ patrimonio.neto|cop }}</p>
+    <p class="tenue">Foto del {{ foto.fecha|fecha_corta }}: cuentas {{ patrimonio.activos|cop }}, deudas {{ patrimonio.deudas_cop|cop }} a TRM <span class="dato">{{ foto.trm|trm }}</span>.</p>
+    {{ grafica_patrimonio(serie) }}
+    {% else %}
+    <p class="vacio">Sin foto mensual todavía. <a href="/fotos/nueva">Toma la primera foto</a>.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section aria-labelledby="t-ultimo">
+  <h2 id="t-ultimo">Último reparto</h2>
+  <div class="tarjeta">
+    {% if ultimo %}
+    <a class="fila" href="/quincena/{{ ultimo.quincena.id }}"><strong>Quincena del {{ ultimo.quincena.fecha|fecha_corta }}</strong></a>
+    <span class="tenue"> · neto <span class="cifra">{{ ultimo.quincena.neto|cop }}</span></span>
+    {{ tira(ultimo.tira, leyenda=False) }}
+    <ul class="filas">
+      {% for b in ultimo.pvr %}
+      <li><span class="nombre"><span><span class="punto t-{{ b.tipo }}"></span> {{ b.nombre }}</span><small class="cifra">plan {{ b.planeado|cop }}</small></span>
+        <span class="monto">{% if b.real is none %}<span class="tenue">sin registrar</span>{% else %}<span class="cifra">{{ b.real|cop }}</span>{% if b.diferencia %}<small class="cifra {{ 'neg' if b.diferencia < 0 else 'pos' }}" style="display:block">{{ "+" if b.diferencia > 0 else "" }}{{ b.diferencia|cop }}</small>{% endif %}{% endif %}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="vacio">Todavía no has repartido ninguna quincena.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

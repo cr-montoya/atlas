@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Catálogo de ejercicios{% endblock %}
+{% block contenido %}
+<div class="r registro">
+<p><a href="/rendimiento/mas">{{ icono("arrow-left", 18) }} Más</a></p>
+<h1>Catálogo de ejercicios</h1>
+{% if ok %}<p class="aviso bien" role="status">Ejercicio agregado.</p>{% endif %}
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+
+<details class="tarjeta" {% if error %}open{% endif %}>
+  <summary>Agregar ejercicio</summary>
+  <form method="post" action="/rendimiento/catalogo/ejercicios">
+    <label for="e-nombre">Nombre</label>
+    <input id="e-nombre" name="nombre" value="{{ valores.get('nombre', '') }}" autocomplete="off" required>
+    <label for="e-grupo">Grupo muscular</label>
+    <select id="e-grupo" name="grupo">{% for g in GRUPOS %}<option value="{{ g }}" {% if valores.get('grupo') == g %}selected{% endif %}>{{ g|capitalize }}</option>{% endfor %}</select>
+    <label for="e-tipo">Tipo de carga</label>
+    <select id="e-tipo" name="tipo_carga">{% for k, v in TIPOS_CARGA.items() %}<option value="{{ k }}" {% if valores.get('tipo_carga') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+    <label class="check"><input type="checkbox" name="carga_hombro" value="1" {% if valores.get('carga_hombro') %}checked{% endif %}> Carga el hombro (muestra el aviso al elegirlo)</label>
+    <button type="submit" class="primario">Agregar ejercicio</button>
+  </form>
+</details>
+
+{% for grupo, items in ejercicios|groupby("grupo") %}
+<h2>{{ grupo|capitalize }}</h2>
+<div class="tarjeta r-filas">
+  {% for e in items %}
+  <div class="fila-catalogo{% if not e.activo %} apagada{% endif %}" id="e-{{ e.id }}">
+    <span>{{ e.nombre }}<small class="tenue">{{ TIPOS_CARGA[e.tipo_carga] }}{% if not e.activo %} · oculto{% endif %}</small></span>
+    <form method="post" action="/rendimiento/catalogo/ejercicios/{{ e.id }}">
+      <input type="hidden" name="carga_hombro" value="{{ '0' if e.carga_hombro else '1' }}">
+      <button type="submit" class="chip{% if e.carga_hombro %} marcado{% endif %}" aria-pressed="{{ 'true' if e.carga_hombro else 'false' }}">{% if e.carga_hombro %}{{ icono("warning", 16) }}{% endif %}Hombro</button>
+    </form>
+    <form method="post" action="/rendimiento/catalogo/ejercicios/{{ e.id }}">
+      <input type="hidden" name="activo" value="{{ '0' if e.activo else '1' }}">
+      <button type="submit" class="fantasma">{{ "Ocultar" if e.activo else "Mostrar" }}</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+</div>
+{% endblock %}

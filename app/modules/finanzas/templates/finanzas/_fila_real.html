@@ -1,0 +1,38 @@
+{% from "_iconos.html" import icono %}
+<li class="fila-real" id="linea-{{ l.id }}">
+  <div class="nombre">
+    <span>{{ l.concepto }}</span>
+    <small><span class="punto t-{{ l.tipo }}"></span> {{ l.bolsillo }}{% if l.deuda %} · abona a {{ l.deuda }}{% endif %}{% if l.fondo %} · fondo {{ l.fondo }}{% endif %}</small>
+  </div>
+  {% if editar %}
+  <form class="real-edit" hx-post="/lineas/{{ l.id }}/real" hx-target="#linea-{{ l.id }}" hx-swap="outerHTML" method="post" action="/lineas/{{ l.id }}/real">
+    <label class="oculto" for="real-{{ l.id }}">Monto real de {{ l.concepto }}</label>
+    <input id="real-{{ l.id }}" name="real" class="monto" type="text" inputmode="numeric" autocomplete="off"
+           value="{{ (l.real if l.real is not none else l.monto)|cop }}" autofocus {% if error %}aria-invalid="true" aria-describedby="real-err-{{ l.id }}"{% endif %}>
+    <button type="submit" class="secundario">Guardar</button>
+    <button type="button" class="fantasma" hx-get="/lineas/{{ l.id }}" hx-target="#linea-{{ l.id }}" hx-swap="outerHTML">Cancelar</button>
+    {% if error %}<p id="real-err-{{ l.id }}" class="error">{{ error }}</p>{% endif %}
+  </form>
+  {% else %}
+  <div class="cifras">
+    {% if l.real is not none %}
+    <button type="button" class="cifra-btn" hx-get="/lineas/{{ l.id }}/real" hx-target="#linea-{{ l.id }}" hx-swap="outerHTML" aria-label="Editar el monto real de {{ l.concepto }}">
+      <span class="monto cifra">{{ l.real|cop }}</span>
+    </button>
+    {% set dif = l.monto - l.real %}
+    <small class="tenue cifra">plan {{ l.monto|cop }}{% if dif != 0 %} · <span class="{{ 'neg' if dif < 0 else 'pos' }}">{{ "+" if dif > 0 else "" }}{{ dif|cop }}</span>{% endif %}</small>
+    {% else %}
+    <button type="button" class="cifra-btn" hx-get="/lineas/{{ l.id }}/real" hx-target="#linea-{{ l.id }}" hx-swap="outerHTML" aria-label="Escribir el monto real de {{ l.concepto }}">
+      <span class="monto cifra suave">{{ l.monto|cop }}</span>
+    </button>
+    <small class="tenue">sin marcar</small>
+    {% endif %}
+  </div>
+  <form method="post" action="/lineas/{{ l.id }}/pagada" hx-post="/lineas/{{ l.id }}/pagada" hx-target="#linea-{{ l.id }}" hx-swap="outerHTML">
+    <button type="submit" class="secundario pagada {{ 'marcada' if l.real is not none else '' }}" aria-pressed="{{ 'true' if l.real is not none else 'false' }}">
+      {{ icono("check", 20) }}<span>Pagada</span>
+    </button>
+  </form>
+  {% endif %}
+</li>
+{% if oob %}{% include "finanzas/_pvr.html" %}{% endif %}

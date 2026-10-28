@@ -1,0 +1,18 @@
+# Servicio de usuario: la demo con datos ficticios en 127.0.0.1:8010 (Caddy la publica como atlas-demo.local).
+# Instalar con: make demo-install-service
+[Unit]
+Description=Atlas demo con datos ficticios (FastAPI)
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/atlas-demo
+EnvironmentFile=%h/Documents/atlas-demo/.env
+Environment=BRAIN_DEMO=1
+Environment=TZ=America/Bogota
+ExecStart=%h/.local/bin/uv run --frozen uvicorn app.main:crear_app --factory --host 127.0.0.1 --port 8010 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

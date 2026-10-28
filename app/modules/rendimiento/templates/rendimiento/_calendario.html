@@ -1,0 +1,33 @@
+{% from "_iconos.html" import icono %}
+<div id="calendario">
+  <div class="cal-cab">
+    <h2 id="t-cal">{{ cal.titulo }}</h2>
+    <div class="cal-nav">
+      {% if cal.anterior %}<a class="icono-btn" href="/rendimiento?mes={{ cal.anterior }}#t-cal" hx-get="/rendimiento/calendario?mes={{ cal.anterior }}"
+         hx-target="#calendario" hx-swap="outerHTML" aria-label="Mes anterior">{{ icono("arrow-left", 20) }}</a>
+      {% else %}<span class="icono-btn apagado" aria-hidden="true">{{ icono("arrow-left", 20) }}</span>{% endif %}
+      {% if cal.siguiente %}<a class="icono-btn girado" href="/rendimiento?mes={{ cal.siguiente }}#t-cal" hx-get="/rendimiento/calendario?mes={{ cal.siguiente }}"
+         hx-target="#calendario" hx-swap="outerHTML" aria-label="Mes siguiente">{{ icono("arrow-left", 20) }}</a>
+      {% else %}<span class="icono-btn girado apagado" aria-hidden="true">{{ icono("arrow-left", 20) }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="tarjeta calendario">
+    <div class="semana" aria-hidden="true">{% for d in "LMMJVSD" %}<span>{{ d }}</span>{% endfor %}</div>
+    <div class="dias">
+      {% for c in cal.celdas %}
+      {% if c.fuera %}<div class="dia fuera">{{ c.n }}</div>
+      {% elif c.futuro %}<div class="dia futuro" aria-disabled="true"><span class="n">{{ c.n }}</span></div>
+      {% else %}
+      <a class="dia{% if c.hoy %} hoy{% endif %}" href="/rendimiento/dia/{{ c.fecha }}"
+         aria-label="Ver el {{ c.nombre }}: {{ c.sesiones|length }} sesion{{ 'es' if c.sesiones|length != 1 }}">
+        <span class="n">{{ c.n }}</span>
+        <span class="barras">{% for s in c.sesiones[:4] %}<i class="b-{{ 'cardio' if s in ('caminata', 'caminadora', 'carrera', 'ciclismo') else s }}"></i>{% endfor %}</span>
+        {% if c.sesiones|length > 4 %}<span class="mas">+{{ c.sesiones|length - 4 }}</span>{% endif %}
+      </a>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <p class="r-leyenda"><i class="b-fuerza"></i>Fuerza<i class="b-judo"></i>Judo<i class="b-bjj"></i>BJJ<i class="b-muaythai"></i>Muay Thai<i class="b-cardio"></i>Cardio</p>
+    <p class="tenue cal-total" aria-live="polite">{{ cal.sesiones }} sesion{{ "es" if cal.sesiones != 1 }} en el mes.</p>
+  </div>
+</div>

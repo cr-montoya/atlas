@@ -1,0 +1,60 @@
+<div id="proyeccion" aria-live="polite">
+  {% if errores %}<p class="error" role="alert">Corrige los montos marcados.</p>{% endif %}
+  {% if avisos %}
+  <ul class="avisos">{% for a in avisos %}<li>{{ a }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% set ultimo = p.meses[-1] if p.meses else none %}
+  {% if ultimo %}
+  <p class="tenue" style="margin:0">Patrimonio proyectado a {{ ultimo.clave }}</p>
+  <p class="cifra-hero {{ 'neg' if ultimo.patrimonio < 0 else '' }}">{{ ultimo.patrimonio|cop }}</p>
+  {% endif %}
+  <div id="grafica-proyeccion" class="grafica alta" role="img"
+       aria-label="Proyección mes a mes: {% for m in serie %}{{ m.mes }} patrimonio {{ m.patrimonio|cop }}, deuda {{ m.deuda|cop }}, fondo de emergencia {{ m.emergencia|cop }}{% if not loop.last %}; {% endif %}{% endfor %}"
+       data-serie='{{ serie|tojson }}' data-meta1="{{ meta1 }}" data-m4="{{ meta_m4 }}" data-incapacidad='{{ incapacidad|tojson }}'></div>
+  <ul class="filas">
+    {% for nombre, mes in p.fecha_cero.items() %}
+    <li><span class="nombre">{{ nombre }} en cero</span><span class="monto cifra">{{ mes or "después del horizonte" }}</span></li>
+    {% endfor %}
+    <li><span class="nombre">Libre de deudas</span><span class="monto cifra">{{ p.mes_libre or "después del horizonte" }}</span></li>
+    <li><span class="nombre">6 meses de básicos</span><span class="monto cifra">{{ p.mes_meta1 or "después del horizonte" }}</span></li>
+    <li><span class="nombre">M4 (12 meses de gasto)</span><span class="monto cifra">{{ p.mes_m4 or "después del horizonte" }}</span></li>
+    {% if ultimo and ultimo.inversion %}<li><span class="nombre">Inversión largo plazo al final<small>desde {{ p.mes_inicio_inversion }}, al {{ esc.inversion_ea_ppm|pct }} % E.A. esperado; variable, sin garantía</small></span><span class="monto cifra">{{ ultimo.inversion|cop }}</span></li>{% endif %}
+    <li><span class="nombre">Rendimientos de las cuentas<small>suma en el horizonte; cuentas netas de retención del {{ esc.retencion_ppm|pct }} %{% if p.mes_inicio_inversion %}, incluye la inversión{% endif %}</small></span><span class="monto cifra">{{ p.rendimientos|cop }}</span></li>
+    {% if ultimo %}<li><span class="nombre">Colchón al final<small>fondo de emergencia {{ ultimo.emergencia|cop }}</small></span><span class="monto cifra">{{ ultimo.meses_colchon_decimas // 10 }},{{ ultimo.meses_colchon_decimas % 10 }} meses</span></li>{% endif %}
+  </ul>
+
+  <h3 style="margin:1.5rem 0 0.5rem">Ahorrar o prepagar</h3>
+  <p class="tenue">Rendimiento efectivo anual de cada cuenta frente al costo efectivo anual de cada deuda. Cada deuda se compara con la cuenta que más rinde.</p>
+  <ul class="filas">
+    {% for c in rend.cuentas %}
+    <li><span class="nombre"><span>{{ c.nombre }}</span><small>{{ c.nota or ("sin dato" if c.ea_ppm is none else "cuenta") }}</small></span>
+      <span class="monto">{% if c.ea_ppm is none %}<span class="tenue">sin dato</span>{% else %}<span class="cifra">{{ c.ea_ppm|pct }} % E.A. neto</span><small class="tenue cifra" style="display:block">{{ c.ea_bruto_ppm|pct }} % antes de retención</small>{% endif %}</span></li>
+    {% endfor %}
+    {% for d in rend.deudas %}
+    <li><span class="nombre"><span>{{ d.nombre }}</span><small>deuda{% if not d.prepagar %} · solo cuota{% endif %}</small></span>
+      <span class="monto cifra">{% if d.ea_ppm is none %}<span class="tenue">sin tasa</span>{% else %}{{ d.ea_ppm|pct }} % E.A.{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+  {% for f in rend.frases %}<p class="{{ 'pos' if f.dif_ppm > 0 else '' }}" style="margin:0.5rem 0 0">{{ f.texto }}: {{ (f.dif_ppm if f.dif_ppm > 0 else -f.dif_ppm)|pct }} puntos de diferencia.</p>{% endfor %}
+  {% if rend.frases %}<p class="tenue" style="margin-top:0.5rem">Se compara el rendimiento neto de la retención del {{ rend.retencion_ppm|pct }} %. Un fondo variable puede rendir menos.</p>{% endif %}
+
+  <h3 style="margin:1.5rem 0 0.5rem">Avalancha frente a bola de nieve</h3>
+  <p class="tenue">Con {{ pago_deudas|cop }} al mes para deudas (promedio de la proyección).</p>
+  <div class="comparacion">
+    {% for c in comparacion %}
+    <div>
+      <strong>{{ "Avalancha" if c.estrategia == "avalancha" else "Bola de nieve" }}</strong>
+      <small class="tenue" style="display:block">{{ "Primero la de mayor tasa" if c.estrategia == "avalancha" else "Primero la de menor saldo" }}: {{ c.orden|join(", ") or "sin deudas" }}</small>
+      <ul class="filas">
+        <li><span class="nombre">Libre de deudas</span><span class="monto cifra">{% if c.mes_libre %}mes {{ c.mes_libre }}{% else %}más de 50 años{% endif %}</span></li>
+        <li><span class="nombre">Intereses totales</span><span class="monto cifra">{{ c.intereses|cop }}</span></li>
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+  {% if comparacion|length == 2 %}
+  {% set dif = comparacion[1].intereses - comparacion[0].intereses %}
+  <p>{% if dif > 0 %}Avalancha ahorra <span class="cifra">{{ dif|cop }}</span> en intereses.{% elif dif < 0 %}Bola de nieve ahorra <span class="cifra">{{ (-dif)|cop }}</span> en intereses.{% else %}Las dos estrategias pagan los mismos intereses con estos datos.{% endif %}</p>
+  {% endif %}
+  <script>window.dibujarProyeccion && window.dibujarProyeccion();</script>
+</div>

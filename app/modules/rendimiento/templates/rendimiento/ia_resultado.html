@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}{{ item.nombre }}{% endblock %}
+{% block contenido %}
+<div class="r registro ia-resultado">
+<p><a href="/rendimiento/ia">{{ icono("arrow-left", 18) }} Análisis con Claude</a></p>
+<h1>{{ item.nombre }}</h1>
+<p class="tenue">{{ item.que }}.{% if t.fin %} {{ t.fin[:10]|fecha_larga|capitalize }}, {{ t.fin[11:16] }}{% if duracion %}, tardó {% if duracion < 60 %}{{ duracion }} s{% else %}{{ duracion|duracion }}{% endif %}{% endif %}.{% endif %}</p>
+
+{% if t.estado in ("en_cola", "corriendo") %}
+{% set es_analisis = true %}
+{% include "rendimiento/_ia_estado.html" %}
+{% elif t.estado == "fallido" %}
+<p class="aviso mal" role="alert">El análisis falló: {{ t.error }}</p>
+{% else %}
+<article class="tarjeta texto-ia">
+  {{ item.res.texto|md_ia }}
+</article>
+{% endif %}
+
+{% if item.res.envio %}<p class="tenue envio">{{ icono("warning", 16) }} {{ item.res.envio }}</p>{% endif %}
+<p class="tenue">Lo marcado [I] es una inferencia de Claude. No reemplaza a tu entrenador, fisio, nutricionista ni ortopedista; ante una molestia, consúltalo con ellos.</p>
+
+{% if t.estado in ("listo", "fallido") %}
+<div class="acciones">
+  {% if t.tipo == "analisis_semana" %}
+  <form method="post" action="/rendimiento/ia/semana"><input type="hidden" name="semana" value="{{ item.params.semana }}">
+    <button type="submit" class="secundario" data-texto-envio="Lanzando…" {% if ocupado or demo %}disabled{% endif %}>{{ icono("arrows-clockwise", 20) }}<span>Volver a analizar</span></button>{% if demo %}<small class="no-demo">No disponible en la demo</small>{% endif %}</form>
+  {% elif t.tipo == "analisis_combate" %}
+  <form method="post" action="/rendimiento/ia/combate">
+    <input type="hidden" name="n" value="{{ item.params.n }}"><input type="hidden" name="disciplina" value="{{ item.params.disciplina }}">
+    <input type="hidden" name="referente" value="{{ item.params.referente }}">
+    <button type="submit" class="secundario" data-texto-envio="Lanzando…" {% if ocupado or demo %}disabled{% endif %}>{{ icono("arrows-clockwise", 20) }}<span>Volver a analizar</span></button>{% if demo %}<small class="no-demo">No disponible en la demo</small>{% endif %}</form>
+  {% else %}
+  {% set f = item.res.fotos or {} %}
+  <a class="secundario" href="/rendimiento/ia?pose={{ f.pose or 'frente' }}&amp;a={{ item.params.a }}&amp;b={{ item.params.b }}#h-fotos">{{ icono("arrows-clockwise", 20) }}<span>Volver a comparar</span></a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if t.registro %}
+<details class="registro-ia">
+  <summary>Registro del trabajo</summary>
+  <pre>{{ t.registro[-20000:] }}</pre>
+</details>
+{% endif %}
+</div>
+{% endblock %}

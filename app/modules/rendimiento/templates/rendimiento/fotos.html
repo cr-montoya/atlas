@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Antes y después{% endblock %}
+{% block ancho %} amplio{% endblock %}
+
+{% macro medidas(lista, f) -%}
+<ul class="medidas-foto">
+  {% for m in lista %}
+  <li><span>{{ m.medida }}</span><b class="cifra">{{ m.valor_mil|decimal }} {{ m.unidad }}</b>
+    <small class="tenue">{% if m.dias == 0 %}el mismo día{% else %}{{ m.fecha|fecha_corta }}{% endif %}{% if m.metodo %} · {{ m.metodo }}{% endif %}</small></li>
+  {% else %}
+  <li class="tenue">Sin medidas a 45 días de esta foto.</li>
+  {% endfor %}
+</ul>
+{%- endmacro %}
+
+{% block contenido %}
+<div class="r fotos-pagina">
+<p><a href="/rendimiento/analisis">{{ icono("arrow-left", 18) }} Análisis</a></p>
+<div class="cabecera r-cab">
+  <div><h1>Antes y después</h1><p class="suave">Las fotos se guardan solo en tu portátil, sin ubicación ni metadatos.</p></div>
+  <a href="/rendimiento/fotos/nueva?pose={{ pose }}" class="secundario">{{ icono("plus", 20) }}<span>Agregar fotos</span></a>
+</div>
+{% if ok and subida.fechas %}
+<div class="aviso bien" role="status">
+  <p>{{ ok }} foto{{ "s" if ok != 1 }} guardada{{ "s" if ok != 1 }}: {% for f in subida.fechas %}{{ f|fecha_corta }}{% if not loop.last %}{{ " y " if loop.revindex == 2 else ", " }}{% endif %}{% endfor %}.
+  {% if subida.exif == ok %}Con la fecha en que se tomó cada una.{% elif subida.exif %}{{ subida.exif }} con la fecha en que se tomó; {{ ok - subida.exif }} sin esa fecha, con la que elegiste.{% else %}Ninguna traía la fecha en que se tomó: usé la que elegiste.{% endif %}</p>
+  {% if subida.reemplazos %}<p>Reemplacé {{ subida.reemplazos }} que ya existía{{ "n" if subida.reemplazos != 1 }} con la misma fecha y pose.</p>{% endif %}
+</div>
+{% elif ok %}<p class="aviso bien" role="status">Foto guardada.</p>{% endif %}
+{% if subida.fallidas %}<p class="aviso mal" role="alert">No pude leer: {{ subida.fallidas|join("; ") }}.</p>{% endif %}
+
+<nav class="chips-botones filtros" aria-label="Pose">
+  {% for k, v in POSES.items() %}
+  <a class="chip-tipo{% if k == pose %} activo{% endif %}" href="?pose={{ k }}" {% if k == pose %}aria-current="page"{% endif %}>{{ v }}<span class="tenue conteo">{{ conteo.get(k, 0) }}</span></a>
+  {% endfor %}
+</nav>
+
+{% if not lista %}
+<div class="tarjeta"><p class="vacio">Todavía no hay fotos de {{ POSES[pose]|lower }}. Toca "Agregar fotos" para tomarla o subirla: la próxima vez verás esta encima de la cámara para repetir el encuadre.</p></div>
+{% else %}
+<div class="mosaico-fotos">
+  <section class="tarjeta b-deslizador" aria-labelledby="h-ad">
+    <header class="t-cab"><h2 id="h-ad">Comparar</h2></header>
+    {% if lista|length > 1 %}
+    <form method="get" action="/rendimiento/fotos" class="dos">
+      <input type="hidden" name="pose" value="{{ pose }}">
+      {% for nombre, actual, etiqueta in [("a", fa, "Antes"), ("b", fb, "Después")] %}
+      <div><label for="f-{{ nombre }}">{{ etiqueta }}</label>
+        <select id="f-{{ nombre }}" name="{{ nombre }}" onchange="this.form.requestSubmit()">
+          {% for f in lista %}<option value="{{ f.id }}" {% if f.id == actual.id %}selected{% endif %}>{{ f.fecha|fecha_corta }}</option>{% endfor %}
+        </select></div>
+      {% endfor %}
+      <noscript><button type="submit" class="secundario">Comparar</button></noscript>
+    </form>
+    <div class="antes-despues" data-ad style="--pos: 50%; aspect-ratio: {{ fb.ancho }} / {{ fb.alto }}">
+      <img class="ad-antes" src="/rendimiento/fotos/{{ fa.id }}/imagen" alt="{{ POSES[pose] }} el {{ fa.fecha|fecha_corta }} (antes)" width="{{ fa.ancho }}" height="{{ fa.alto }}">
+      <img class="ad-despues" src="/rendimiento/fotos/{{ fb.id }}/imagen" alt="{{ POSES[pose] }} el {{ fb.fecha|fecha_corta }} (después)" width="{{ fb.ancho }}" height="{{ fb.alto }}">
+      <span class="ad-linea" aria-hidden="true"></span>
+      <span class="ad-etq izq">{{ fa.fecha|fecha_corta }}</span><span class="ad-etq der">{{ fb.fecha|fecha_corta }}</span>
+    </div>
+    <label for="ad-rango" class="oculto">Deslizador antes y después</label>
+    <input id="ad-rango" class="ad-rango" type="range" min="0" max="100" value="50" aria-valuetext="50 % después">
+    <div class="dos medidas-dos">
+      <div><h3>Antes · {{ fa.fecha|fecha_corta }}</h3>{{ medidas(medidas_a, fa) }}</div>
+      <div><h3>Después · {{ fb.fecha|fecha_corta }}</h3>{{ medidas(medidas_b, fb) }}</div>
+    </div>
+    {% if fa.id != fb.id %}<p><a href="/rendimiento/ia?pose={{ pose }}&amp;a={{ fa.id }}&amp;b={{ fb.id }}#h-fotos">Pedirle a Claude que compare estas dos fotos</a></p>{% endif %}
+    {% else %}
+    <img class="foto-sola" src="/rendimiento/fotos/{{ fb.id }}/imagen" alt="{{ POSES[pose] }} el {{ fb.fecha|fecha_corta }}" width="{{ fb.ancho }}" height="{{ fb.alto }}">
+    <p class="tenue">Con una segunda foto de {{ POSES[pose]|lower }} aparece el deslizador antes y después.</p>
+    {{ medidas(medidas_b, fb) }}
+    {% endif %}
+  </section>
+
+  {% if lista|length > 1 %}
+  <section class="tarjeta b-linea" aria-labelledby="h-linea">
+    <header class="t-cab"><h2 id="h-linea">Línea de tiempo</h2></header>
+    <div class="linea-tiempo" data-linea style="aspect-ratio: {{ fb.ancho }} / {{ fb.alto }}">
+      {% for f in lista %}
+      <img src="/rendimiento/fotos/{{ f.id }}/imagen?mini=1" alt="{{ POSES[pose] }} el {{ f.fecha|fecha_corta }}" width="{{ f.ancho }}" height="{{ f.alto }}"
+           loading="lazy" data-fecha="{{ f.fecha|fecha_corta }}" {% if loop.last %}class="visible"{% endif %}>
+      {% endfor %}
+    </div>
+    <div class="linea-controles">
+      <button type="button" class="secundario icono-solo" data-reproducir aria-label="Reproducir la línea de tiempo">{{ icono("play", 20) }}</button>
+      <label for="lt-rango" class="oculto">Fecha de la línea de tiempo</label>
+      <input id="lt-rango" type="range" min="0" max="{{ lista|length - 1 }}" value="{{ lista|length - 1 }}" data-linea-rango>
+      <span class="cifra" data-linea-fecha aria-live="polite">{{ lista[-1].fecha|fecha_corta }}</span>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="b-galeria" aria-labelledby="h-galeria">
+    <h2 id="h-galeria">Todas las fotos de {{ POSES[pose]|lower }}</h2>
+    <p class="tenue">Se ven borrosas hasta que las tocas.</p>
+    <ul class="galeria">
+      {% for f in lista|reverse %}
+      <li>
+        <button type="button" class="miniatura" data-revelar aria-label="Mostrar la foto del {{ f.fecha|fecha_corta }}" aria-pressed="false">
+          <img src="/rendimiento/fotos/{{ f.id }}/imagen?mini=1" alt="" width="{{ f.ancho }}" height="{{ f.alto }}" loading="lazy">
+        </button>
+        <div class="galeria-pie"><span class="cifra">{{ f.fecha|fecha_corta }}</span>
+          <form method="post" action="/rendimiento/fotos/{{ f.id }}/borrar">
+            <button type="submit" class="icono-btn" aria-label="Borrar la foto del {{ f.fecha|fecha_corta }}"
+                    onclick="return confirm('¿Borrar esta foto? No se puede deshacer.')">{{ icono("trash", 18) }}</button>
+          </form></div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/fotos.js?v=1"></script>{% endblock %}

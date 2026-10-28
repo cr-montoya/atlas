@@ -1,0 +1,10 @@
+{% from "_iconos.html" import icono %}
+<div id="estado-voz" class="ia-estado" role="status" aria-live="polite" hx-get="/rendimiento/voz/{{ e.id }}/estado" hx-trigger="every 2s" hx-swap="outerHTML">
+  <div class="tarjeta pensando">
+    {{ icono("arrows-clockwise", 22, "girando") }}
+    <div>
+      <p><b>{{ "Transcribiendo…" if e.estado == "transcribiendo" else "Entendiendo el relato…" }}</b></p>
+      <p class="tenue">Suele tardar menos de un minuto. Puedes salir de esta pantalla y volver.</p>
+    </div>
+  </div>
+</div>

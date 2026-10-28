@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block titulo %}Entrar{% endblock %}
+{% block navegacion %}{% endblock %}
+{% block contenido %}
+<section class="login">
+  <h1>Atlas</h1>
+  <p class="suave">Escribe tu PIN para ver tus datos.</p>
+  <form method="post" action="/login">
+    <label for="pin">PIN</label>
+    <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password"
+           required autofocus {% if error %}aria-invalid="true" aria-describedby="pin-error"{% endif %}>
+    {% if error %}<p id="pin-error" class="error" role="alert">{{ error }}</p>{% endif %}
+    <button type="submit" class="primario">Entrar</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Cómo me sentí{% endblock %}
+{% block contenido %}
+<div class="r sentir">
+<p><a class="volver" href="{{ destino }}">{{ icono("arrow-left", 18) }} Volver</a></p>
+<h1>Cómo me sentí</h1>
+{% if d %}<p class="suave">{% if nombre in ("hoy", "ayer") %}{{ nombre|capitalize }}, {{ d|fecha_larga }}{% else %}{{ d|fecha_larga|capitalize }}{% endif %}. Todo es opcional: marca solo lo que quieras contar.</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}.</p>{% endif %}
+
+{% if fecha %}
+<form method="post" action="/rendimiento/sensaciones" class="form-sentir">
+  <input type="hidden" name="fecha" value="{{ fecha }}">
+  <input type="hidden" name="volver" value="{{ volver }}">
+
+  <section class="tarjeta" aria-labelledby="h-escalas">
+    <h2 id="h-escalas">Escalas</h2>
+    {% for k, nombre_e, corto, sentido in ESCALAS %}
+    <fieldset class="escala-sentir">
+      <legend>{{ nombre_e }} <span class="tenue">({{ sentido }})</span></legend>
+      <div class="segmentos chips seis">
+        <label><input type="radio" name="{{ k }}" value=""{% if fila[k] is none %} checked{% endif %}><span>Sin dato</span></label>
+        {% for n in range(1, 6) %}
+        <label><input type="radio" name="{{ k }}" value="{{ n }}"{% if fila[k] == n %} checked{% endif %}><span>{{ n }}</span></label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    {% endfor %}
+  </section>
+
+  <section class="tarjeta" aria-labelledby="h-sintomas">
+    <h2 id="h-sintomas">Síntomas</h2>
+    <div class="sintomas-sentir">
+      {% for c, nombre_s in SINTOMAS.items() %}
+      <label class="check"><input type="checkbox" name="sintomas" value="{{ c }}"{% if c in fila.sintomas %} checked{% endif %}> {{ nombre_s }}</label>
+      {% endfor %}
+    </div>
+    <label for="s-otros">Otros síntomas <span class="tenue">(opcional)</span></label>
+    <input id="s-otros" type="text" name="sintomas_otros" value="{{ fila.sintomas_otros or '' }}" maxlength="{{ MAX.sintomas_otros }}">
+    <label for="s-dolor">Dolor <span class="tenue">(opcional)</span></label>
+    <input id="s-dolor" type="text" name="dolor" value="{{ fila.dolor or '' }}" maxlength="{{ MAX.dolor }}" placeholder="cuello, lado derecho, 6 de 10">
+  </section>
+
+  <section class="tarjeta" aria-labelledby="h-entreno">
+    <h2 id="h-entreno">¿Entrenaste?</h2>
+    <div class="segmentos chips opciones-sentir">
+      <label><input type="radio" name="sin_entreno" value=""{% if not fila.sin_entreno %} checked{% endif %}><span>Sin dato</span></label>
+      {% for k, n in SIN_ENTRENO.items() %}
+      <label><input type="radio" name="sin_entreno" value="{{ k }}"{% if fila.sin_entreno == k %} checked{% endif %}><span>{{ n }}</span></label>
+      {% endfor %}
+    </div>
+    <label for="s-notas">Notas <span class="tenue">(opcional)</span></label>
+    <textarea id="s-notas" name="notas" rows="2" maxlength="{{ MAX.notas }}">{{ fila.notas or '' }}</textarea>
+  </section>
+
+  {% if fila.relato %}
+  <section class="tarjeta" aria-labelledby="h-relato">
+    <h2 id="h-relato">Lo que dijiste</h2>
+    <blockquote class="relato-sentir">{% for l in fila.relato.splitlines() %}<p>«{{ l }}»</p>{% endfor %}</blockquote>
+    <p class="tenue">Viene del registro por voz y no se edita aquí.</p>
+  </section>
+  {% endif %}
+
+  <div class="acciones">
+    <button type="submit">{{ icono("check", 20) }}<span>Guardar</span></button>
+  </div>
+</form>
+{% endif %}
+</div>
+{% endblock %}

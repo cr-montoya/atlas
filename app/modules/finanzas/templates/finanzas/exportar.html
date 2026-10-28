@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Exportar{% endblock %}
+{% block contenido %}
+<p><a href="/mas">Más</a></p>
+<h1>Exportar resumen</h1>
+<p class="suave">Resumen mensual en Markdown con las reglas del vault.</p>
+<form class="tarjeta" method="get" action="/exportar">
+  <label for="mes">Mes</label>
+  <input id="mes" name="mes" type="month" value="{{ mes }}" required>
+  <button type="submit" class="secundario" style="width:100%">Ver resumen</button>
+</form>
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% else %}
+<section class="tarjeta">
+  <div class="acciones" style="margin-top:0;margin-bottom:0.75rem">
+    <a class="secundario" href="/exportar/{{ mes }}-resumen-finanzas.md" download>{{ icono("download-simple", 20) }}Descargar {{ mes }}-resumen-finanzas.md</a>
+    <button type="button" class="secundario" id="copiar">{{ icono("copy", 20) }}<span>Copiar</span></button>
+  </div>
+  <pre class="md" id="md" tabindex="0">{{ md }}</pre>
+</section>
+{% endif %}
+
+<section class="tarjeta" aria-labelledby="t-ia">
+  <h2 id="t-ia" style="margin-top:0">Resumen para IA</h2>
+  {% if ok == "ia" %}<p class="aviso bien" role="status">Resumen para IA regenerado.</p>{% endif %}
+  <p class="tenue">Se regenera al confirmar una quincena o un ingreso, al guardar el escenario y al guardar la revisión. La sesión del Life Brain lo lee desde:</p>
+  <p class="ruta"><code>{{ ia.ruta }}</code></p>
+  <p class="tenue">{% if ia.existe %}Última versión: {{ ia.generado }}.{% else %}Todavía no se ha generado.{% endif %} Mismo nombre con extensión .md para leerlo.</p>
+  <form method="post" action="/exportar/resumen-ia"><button type="submit" class="secundario" style="width:100%">Generar ahora</button></form>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var b = document.getElementById("copiar");
+  if (!b) return;
+  b.addEventListener("click", function () {
+    var t = document.getElementById("md").textContent, s = b.querySelector("span");
+    var listo = function () { s.textContent = "Copiado"; setTimeout(function () { s.textContent = "Copiar"; }, 2000); };
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(t).then(listo); return; }
+    var r = document.createRange(); r.selectNodeContents(document.getElementById("md"));
+    var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    try { document.execCommand("copy"); listo(); } catch (e) { s.textContent = "Selecciona y copia"; }
+  });
+})();
+</script>
+{% endblock %}

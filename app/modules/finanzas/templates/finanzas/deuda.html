@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block titulo %}{{ d.nombre }}{% endblock %}
+{% block contenido %}
+{% set usd = d.moneda == "USD" %}
+<p><a href="/deudas">Deudas</a></p>
+{% if ok == "abono" %}<p class="aviso bien" role="status">Abono registrado.</p>{% elif ok == "ajuste" %}<p class="aviso bien" role="status">Saldo ajustado al extracto.</p>{% elif ok == "parametros" %}<p class="aviso bien" role="status">Tasa y cuota guardadas.</p>{% endif %}
+<section class="tarjeta">
+  <h1>{{ d.nombre }}</h1>
+  <p class="cifra-hero">{{ d.saldo|moneda(d.moneda) }}{% if usd %} <span class="suave" style="font-size:1.5rem">USD</span>{% endif %}</p>
+  {% if usd and e.saldo_cop %}<p class="tenue">≈ <span class="cifra">{{ e.saldo_cop|cop }}</span> COP a TRM <span class="dato">{{ e.trm|trm }}</span></p>{% endif %}
+  {% if e.estimado %}
+  <p>En cero hacia el <strong>{{ e.estimado.fecha|fecha_larga }} de {{ e.estimado.fecha.year }}</strong>: {{ e.estimado.quincenas }} {{ "quincena" if e.estimado.quincenas == 1 else "quincenas" }} al promedio de
+    <span class="cifra">{{ e.estimado.promedio|moneda(d.moneda) }}{% if usd %} USD{% endif %}</span>{% if usd and e.promedio_cop %} (≈ <span class="cifra">{{ e.promedio_cop|cop }}</span> COP){% endif %} por quincena.</p>
+  {% if e.estimado.pocos_datos %}<p class="tenue">Pocos datos: el promedio sale de una sola quincena con abonos y puede ser optimista.</p>{% endif %}
+  {% elif d.saldo > 0 %}
+  <p class="tenue">Sin abonos en los últimos 60 días: no hay fecha estimada.</p>
+  {% endif %}
+</section>
+
+<form class="tarjeta" method="post" action="/deudas/{{ d.id }}/abono">
+  <h2 style="margin-top:0">Registrar abono</h2>
+  {% if error_abono %}<p class="error" role="alert">{{ error_abono }}</p>{% endif %}
+  <div class="dos">
+    <div>
+      <label for="a-fecha">Fecha</label>
+      <input id="a-fecha" name="fecha" type="date" value="{{ hoy }}" required>
+    </div>
+    <div>
+      <label for="a-monto">Monto{% if usd %} en USD{% endif %}</label>
+      <input id="a-monto" name="monto" class="monto" type="text" inputmode="decimal" autocomplete="off" placeholder="{{ '260,00' if usd else '500.000' }}" required>
+    </div>
+  </div>
+  {% if usd %}
+  <label for="a-trm">TRM del abono</label>
+  <input id="a-trm" name="trm" class="monto" type="text" inputmode="decimal" autocomplete="off" placeholder="3.199,61" required>
+  {% endif %}
+  <label for="a-nota">Nota (opcional)</label>
+  <input id="a-nota" name="nota" type="text" autocomplete="off">
+  <button type="submit" class="primario">Registrar abono</button>
+</form>
+
+<details class="tarjeta" {% if error_ajuste %}open{% endif %}>
+  <summary>Ajustar al saldo del extracto</summary>
+  <p class="tenue">Reemplaza el saldo por el del extracto (con intereses). Queda un movimiento de ajuste con la diferencia.</p>
+  {% if error_ajuste %}<p class="error" role="alert">{{ error_ajuste }}</p>{% endif %}
+  <form method="post" action="/deudas/{{ d.id }}/ajuste">
+    <div class="dos">
+      <div>
+        <label for="j-fecha">Fecha del extracto</label>
+        <input id="j-fecha" name="fecha" type="date" value="{{ hoy }}" required>
+      </div>
+      <div>
+        <label for="j-saldo">Saldo del extracto</label>
+        <input id="j-saldo" name="saldo" class="monto" type="text" inputmode="decimal" autocomplete="off" required>
+      </div>
+    </div>
+    <button type="submit" class="secundario" style="width:100%">Ajustar saldo</button>
+  </form>
+</details>
+
+<details class="tarjeta" {% if error_param %}open{% endif %}>
+  <summary>Tasa, cuota y prepago{% if d.tasa_mensual_ppm is none %} (sin tasa){% endif %}</summary>
+  <p class="tenue">Se usan en la proyección y en la comparación avalancha y bola de nieve. Sin tasa, se proyecta sin intereses.</p>
+  {% if error_param %}<p class="error" role="alert">{{ error_param }}</p>{% endif %}
+  <form method="post" action="/deudas/{{ d.id }}/parametros">
+    <div class="dos">
+      <div><label for="p-tasa">Tasa mensual (%)</label>
+        <input id="p-tasa" name="tasa" class="monto" type="text" inputmode="decimal" autocomplete="off" value="{{ d.tasa_mensual_ppm|pct }}" placeholder="2,1285"></div>
+      <div><label for="p-cuota">Cuota mínima al mes (COP)</label>
+        <input id="p-cuota" name="cuota" class="monto" type="text" inputmode="numeric" autocomplete="off" value="{{ d.cuota_mensual|cop }}"></div>
+    </div>
+    <label class="check"><input type="checkbox" name="prepagar" value="1" {% if d.prepagar %}checked{% endif %}> Prepagar con el sobrante (en el plan)</label>
+    <button type="submit" class="secundario" style="width:100%">Guardar tasa y cuota</button>
+  </form>
+</details>
+
+<section class="tarjeta" aria-labelledby="t-mov">
+  <h2 id="t-mov" style="margin-top:0">Movimientos</h2>
+  {% if movs %}
+  <ul class="filas">
+    {% for m in movs %}
+    <li>
+      <span class="nombre"><span>{{ "Abono" if m.tipo == "abono" else "Ajuste" }} · {{ m.fecha|fecha_corta }}</span>
+        <small>{% if m.trm %}TRM {{ m.trm|trm }} · costo {{ m.costo_cop|cop }} COP{% if m.nota %} · {% endif %}{% endif %}{{ m.nota }}</small></span>
+      <span class="monto cifra {{ 'neg' if m.tipo == 'ajuste' and m.monto > 0 else '' }}">{% if m.tipo == "abono" %}-{{ m.monto|moneda(d.moneda) }}{% else %}{{ "+" if m.monto > 0 else "" }}{{ m.monto|moneda(d.moneda) }}{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="vacio">Sin movimientos todavía.</p>
+  {% endif %}
+</section>
+{% endblock %}

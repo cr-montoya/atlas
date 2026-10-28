@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Registrar{% endblock %}
+{% block ancho %} amplio{% endblock %}
+{% block contenido %}
+<div class="r">
+<h1>Registrar</h1>
+<p class="suave">{{ fecha|fecha_larga|capitalize }}. Elige el día y qué entrenaste.</p>
+
+{% if guardada %}
+<div class="aviso bien guardada" role="status">
+  <p><strong>Sesión guardada.</strong> {{ guardada.disciplina|disciplina }}{% if guardada.duracion_s %}, {{ guardada.duracion_s|duracion }}{% endif %}.</p>
+  {% if vinculada %}<p class="tenue">Vinculada con {{ vinculada.deporte }} de {{ vinculada.fuente|capitalize }}: {{ vinculada.duracion_s|duracion }}{% if vinculada.fc_media %}, FC media {{ vinculada.fc_media }}, máx {{ vinculada.fc_max }}{% endif %}.</p>{% endif %}
+</div>
+{% endif %}
+
+<nav class="chips-dia" aria-label="Día">
+  <span class="etiqueta-dia" id="t-dia">Día</span>
+  {% for d in dias %}
+  <a class="chip-tipo{% if d.fecha == fecha %} activo{% endif %}" href="/rendimiento/registrar?fecha={{ d.fecha }}"{% if d.fecha == fecha %} aria-current="page"{% endif %}>{{ d.nombre }}</a>
+  {% endfor %}
+</nav>
+
+<form method="post" action="/rendimiento/sesiones" class="tipos-sesion">
+  <input type="hidden" name="fecha" value="{{ fecha }}">
+  {% for tipo, nombre, ic, color in [("fuerza", "Fuerza", "barbell", "c-fuerza"), ("combate", "Combate", "hand-fist", "c-judo")] %}
+  <button type="submit" name="tipo" value="{{ tipo }}" class="tipo-sesion">
+    {{ icono(ic, 28, color) }}
+    <span><strong>{{ nombre }}</strong>
+      {% if borradores[tipo] %}<small>Continuar la de {{ "hoy" if fecha == hoy.isoformat() else "este día" }}</small>{% endif %}</span>
+  </button>
+  {% endfor %}
+  <a href="/rendimiento/actividades" class="tipo-sesion">
+    {{ icono("person-simple-run", 28, "c-cardio") }}
+    <span><strong>Cardio</strong><small class="tenue-chico">Del reloj</small></span>
+  </a>
+  <a href="/rendimiento/comidas" class="tipo-sesion">
+    {{ icono("check-circle", 28, "c-bjj") }}
+    <span><strong>Comidas</strong><small class="tenue-chico">Frente al plan</small></span>
+  </a>
+</form>
+
+<section aria-labelledby="t-recientes">
+  <h2 id="t-recientes">Últimas sesiones</h2>
+  <div class="tarjeta r-filas">
+    {% for s in recientes %}
+    <a class="fila-dato fila-enlace" href="/rendimiento/sesiones/{{ s.id }}">
+      <span class="punto-disciplina b-{{ s.disciplina }}" aria-hidden="true"></span>
+      <span>{{ s.disciplina|disciplina }} <small class="tenue">{{ s.fecha|fecha_corta }}</small></span>
+      <b class="cifra">{% if s.duracion_s %}{{ s.duracion_s|duracion }}{% endif %}</b>
+    </a>
+    {% else %}
+    <p class="vacio">Sin sesiones todavía. Toca Fuerza, Combate o Cardio para registrar la primera.</p>
+    {% endfor %}
+  </div>
+</section>
+</div>
+{% endblock %}

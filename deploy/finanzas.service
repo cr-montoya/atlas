@@ -1,0 +1,17 @@
+# Servicio de usuario: la app en 127.0.0.1:8000 (Caddy queda adelante en el puerto 80).
+# Instalar con: make install-service
+[Unit]
+Description=Finanzas personales (FastAPI)
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/finanzas-personales
+EnvironmentFile=%h/Documents/finanzas-personales/.env
+Environment=TZ=America/Bogota
+ExecStart=%h/.local/bin/uv run --frozen uvicorn app.main:crear_app --factory --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

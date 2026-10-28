@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% from "rendimiento/_anillos.html" import anillo %}
+{% block titulo %}Metas{% endblock %}
+{% block ancho %} amplio{% endblock %}
+{% block contenido %}
+<div class="r metas">
+<p><a href="/rendimiento/analisis">{{ icono("arrow-left", 18) }} Análisis</a></p>
+<h1>Metas</h1>
+<p class="suave">Las metas con cifra que hay en tu vault. "Marcarse" no tiene una cifra, así que el peso va como tendencia.</p>
+
+<div class="mosaico-metas">
+  <section class="tarjeta t-dato entra-r" aria-labelledby="m-pasos">
+    <header><span id="m-pasos">{{ icono("footprints", 20, "c-fuerza") }} Pasos</span></header>
+    {{ anillo(pasos.anillo, "--r-fuerza") }}
+    <footer class="tenue">{% if pasos.dias %}Promedio de {{ pasos.dias }} días; {{ pasos.cumplidos }} {{ 'llegó' if pasos.cumplidos == 1 else 'llegaron' }} a {{ (pasos.meta * 1000)|decimal }}. Garmin incluye los del entrenamiento; la meta del plan es sin ellos.{% else %}Sin pasos en los últimos 7 días. Sincroniza en Actividades del reloj.{% endif %}</footer>
+  </section>
+  <section class="tarjeta t-dato entra-r" aria-labelledby="m-agua">
+    <header><span id="m-agua">{{ icono("heartbeat", 20, "c-judo") }} Líquidos hoy</span></header>
+    {{ anillo(liquidos.anillo, "--r-judo") }}
+    <footer class="tenue">{% if liquidos.anillo.frac is not none %}Meta {{ liquidos.meta_ml|decimal(1) }} L.{% else %}Sin registro hoy.{% endif %} <a href="/rendimiento/comidas#dia">Registrar agua</a></footer>
+  </section>
+  <section class="tarjeta t-dato entra-r" aria-labelledby="m-combate">
+    <header><span id="m-combate">{{ icono("hand-fist", 20, "c-muaythai") }} Muay Thai o BJJ</span></header>
+    {{ anillo(combate.anillo, "--r-muaythai") }}
+    <footer class="tenue">Meta: {{ combate.meta }} por semana (objetivos deportivos).</footer>
+  </section>
+  <section class="tarjeta t-dato entra-r" aria-labelledby="m-comidas">
+    <header><span id="m-comidas">{{ icono("check-circle", 20, "c-cardio") }} Comidas registradas</span></header>
+    {{ anillo(comidas.anillo, "--r-cardio") }}
+    <footer class="tenue">Esta semana. Mide el registro, no si cumpliste el plan. <a href="/rendimiento/comidas">Registrar</a></footer>
+  </section>
+</div>
+
+<div class="dos-col metas-abajo">
+  <section aria-labelledby="m-hitos"><h2 id="m-hitos">Cuenta regresiva</h2>
+    <div class="tarjeta r-filas">
+      {% for h in hitos %}
+      {% if h.enlace %}<a class="fila-hito fila-enlace{% if h.pasado %} apagada{% endif %}" href="{{ h.enlace }}"><span>{{ h.nombre }}<small class="tenue">{{ h.detalle }}</small></span>
+        <b class="cifra">{% if not h.pasado and h.dias > 0 %}<span class="cifra-tarjeta">{{ h.dias }}</span> días{% if h.aproximado %} aprox.{% endif %}{% else %}{{ h.texto }}{% endif %}</b></a>
+      {% else %}<div class="fila-hito{% if h.pasado %} apagada{% endif %}"><span>{{ h.nombre }}<small class="tenue">{{ h.detalle }}</small></span>
+        <b class="cifra">{% if not h.pasado and h.dias > 0 %}<span class="cifra-tarjeta">{{ h.dias }}</span> días{% if h.aproximado %} aprox.{% endif %}{% else %}{{ h.texto }}{% endif %}</b></div>{% endif %}
+      {% else %}<p class="vacio">Sin hitos en objetivos-deportivos.md.</p>{% endfor %}
+    </div>
+  </section>
+  <section aria-labelledby="m-peso"><h2 id="m-peso">Peso</h2>
+    <div class="tarjeta">
+      {% if peso %}
+      <p class="cifra-tarjeta">{{ peso.valor_mil|decimal }}<span class="unidad">kg</span></p>
+      <p class="tenue">{{ peso.fecha|fecha_corta }}{% if peso.delta %}: {{ peso.delta|delta_txt("kg", "mil") }} frente al {{ peso.fecha_prev|fecha_corta }}{% endif %}. {{ peso.metodo }}. Sin meta numérica.</p>
+      {% else %}<p class="vacio">Sin pesos registrados. <a href="/rendimiento/tests/nuevo?tipo=antropometria">Registrar un test</a></p>{% endif %}
+    </div>
+  </section>
+</div>
+</div>
+{% endblock %}

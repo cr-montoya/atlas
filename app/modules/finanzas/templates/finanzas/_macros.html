@@ -1,0 +1,67 @@
+{# Tira del reparto: segmentos proporcionales por bolsillo; "por_repartir" dibuja lo que falta asignar. #}
+{% macro tira(segmentos, por_repartir=0, leyenda=True) -%}
+<div class="tira" role="img" aria-label="Reparto: {% for s in segmentos %}{{ s.nombre }} {{ s.monto|cop }}{% if not loop.last %}, {% endif %}{% endfor %}{% if por_repartir > 0 %}, sin repartir {{ por_repartir|cop }}{% endif %}">
+  {%- for s in segmentos if s.monto > 0 %}<span class="t-{{ s.tipo }}" style="flex: {{ s.monto }} 1 0"></span>{% endfor -%}
+  {%- if por_repartir > 0 %}<span class="sobra" style="flex: {{ por_repartir }} 1 0"></span>{% endif -%}
+</div>
+{% if leyenda %}
+<ul class="leyenda">
+  {% for s in segmentos %}
+  <li><span class="punto t-{{ s.tipo }}"></span>{{ s.nombre }}<span class="monto cifra">{{ s.monto|cop }}</span></li>
+  {% endfor %}
+</ul>
+{% endif %}
+{%- endmacro %}
+
+{% macro tipo(t) -%}<span class="tipo"><span class="punto t-{{ t }}"></span>{{ t }}</span>{%- endmacro %}
+
+{% macro barra_meta(m) -%}
+<div class="meta">
+  <div class="cab"><strong>{{ m.meta.nombre }}</strong><span class="cifra">{{ m.avance.pct }} %</span></div>
+  <div class="riel" role="progressbar" aria-label="{{ m.meta.nombre }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ m.avance.pct }}"><span style="width: {{ m.avance.pct }}%"></span></div>
+  <div class="tenue cifra">{{ m.avance.actual|cop }} de {{ m.avance.objetivo|cop }} · {% if m.avance.faltan > 0 %}Faltan {{ m.avance.faltan|cop }}{% else %}Cumplida{% endif %}</div>
+</div>
+{%- endmacro %}
+
+{% macro grafica_patrimonio(serie, id="grafica-patrimonio") -%}
+{% if serie|length < 2 %}
+<p class="tenue" style="margin:0.75rem 0 0">La gráfica de la serie aparece desde la segunda foto mensual.</p>
+{% else %}
+<div id="{{ id }}" class="grafica" role="img" aria-label="Patrimonio neto por foto: {% for p in serie %}{{ p.fecha }} {{ p.neto|cop }}{% if not loop.last %}; {% endif %}{% endfor %}"></div>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" integrity="sha384-Mx5lkUEQPM1pOJCwFtUICyX45KNojXbkWdYhkKUKsbv391mavbfoAmONbzkgYPzR" crossorigin="anonymous"></script>
+<script>
+(function () {
+  var datos = {{ serie|tojson }};
+  var el = document.getElementById({{ id|tojson }});
+  if (!window.echarts || !el) return;
+  var css = getComputedStyle(document.documentElement);
+  var v = function (n) { return css.getPropertyValue(n).trim(); };
+  var fmt = function (n) { return (n < 0 ? "-" : "") + Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); };
+  var meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  var dia = function (f) { var p = f.split("-"); return +p[2] + " " + meses[+p[1] - 1]; };
+  var corto = function (n) { var a = Math.abs(n); return (n < 0 ? "-" : "") + (a >= 1e6 ? (a / 1e6).toFixed(1).replace(".", ",") + " M" : fmt(a)); };
+  var g = echarts.init(el, null, { renderer: "svg" });
+  g.setOption({
+    animation: !matchMedia("(prefers-reduced-motion: reduce)").matches,
+    grid: { left: 8, right: 24, top: 16, bottom: 8, containLabel: true },
+    tooltip: { trigger: "axis", backgroundColor: v("--superficie-alta"), borderColor: v("--linea"),
+      textStyle: { color: v("--tinta"), fontFamily: "Geist" },
+      valueFormatter: function (n) { return fmt(n); } },
+    xAxis: { type: "category", data: datos.map(function (d) { return d.fecha; }), boundaryGap: false,
+      axisLine: { lineStyle: { color: v("--linea") } }, axisTick: { show: false },
+      axisLabel: { color: v("--tinta-tenue"), fontFamily: "Geist", formatter: dia, hideOverlap: true } },
+    yAxis: { type: "value", splitLine: { lineStyle: { color: v("--linea") } },
+      axisLabel: { color: v("--tinta-tenue"), fontFamily: "Geist", formatter: corto } },
+    series: [{ name: "Patrimonio", type: "line", data: datos.map(function (d) { return d.neto; }),
+      showSymbol: true, symbolSize: 7, lineStyle: { width: 2, color: v("--tinta") },
+      itemStyle: { color: v("--tinta") },
+      markLine: { silent: true, symbol: "none", label: { show: false },
+        lineStyle: { color: v("--tinta-tenue"), type: "solid", width: 1 }, data: [{ yAxis: 0 }] } }]
+  });
+  addEventListener("resize", function () { g.resize(); });
+})();
+</script>
+{% endif %}
+{%- endmacro %}
+
+{% macro estimado() -%}<span class="tipo estimado">estimado</span>{%- endmacro %}

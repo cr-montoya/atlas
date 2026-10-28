@@ -1,0 +1,16 @@
+{% from "_iconos.html" import icono %}
+<div class="linea-reparto nueva">
+  <input type="hidden" name="modo" value="fijo">
+  <input type="hidden" name="fondo_id" value="">
+  <div class="info">
+    <input type="text" name="concepto" placeholder="Concepto" aria-label="Concepto" required>
+  </div>
+  <input class="monto" type="text" name="monto" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Monto">
+  <select name="bolsillo_id" aria-label="Bolsillo">
+    {% for b in bolsillos %}<option value="{{ b.id }}">{{ b.nombre }}</option>{% endfor %}
+  </select>
+  <select name="deuda_id" aria-label="Abona a una deuda">
+    <option value="">Sin abono a deuda</option>
+    {% for d in deudas %}<option value="{{ d.id }}">Abona a {{ d.nombre }}</option>{% endfor %}
+  </select>
+</div>

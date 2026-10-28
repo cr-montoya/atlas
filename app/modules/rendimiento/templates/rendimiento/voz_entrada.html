@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Relato{% endblock %}
+
+{% macro marcas(t, ruta) -%}
+{%- for m in t.marcas.get(ruta, []) %}
+<span class="marca-voz {{ m.clase }}">{{ icono("warning", 14) if m.bloquea else icono("link", 14) }}{{ m.texto }}{% if m.confirmable %}<label class="confirmo"><input type="checkbox" name="{{ t.i }}.confirmo" value="{{ ruta }}"> Lo confirmo</label>{% endif %}</span>
+{%- endfor %}
+{%- endmacro %}
+
+{% macro numero(t, ruta, valor, etiqueta, paso="1", unidad="") -%}
+<label class="campo-voz{% if t.marcas.get(ruta) %} con-marca{% endif %}"><span>{{ etiqueta }}{% if unidad %} <span class="tenue">({{ unidad }})</span>{% endif %}</span>
+  <input type="number" name="{{ t.i }}.{{ ruta }}" value="{{ valor if valor is not none else '' }}" step="{{ paso }}" min="0" inputmode="decimal" class="cifra">
+  {{ marcas(t, ruta) }}</label>
+{%- endmacro %}
+
+{% macro escala(t, ruta, valor, etiqueta, desde, hasta) -%}
+<label class="campo-voz{% if t.marcas.get(ruta) %} con-marca{% endif %}"><span>{{ etiqueta }} <span class="tenue">(opcional)</span></span>
+  <select name="{{ t.i }}.{{ ruta }}"><option value="">Sin dato</option>{% for n in range(desde, hasta + 1) %}<option value="{{ n }}"{% if valor == n %} selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+  {{ marcas(t, ruta) }}</label>
+{%- endmacro %}
+
+{% macro comunes(t) -%}
+{% set it = t.item %}
+<div class="rejilla-voz">
+  <label class="campo-voz{% if t.marcas.get('fecha') %} con-marca{% endif %}"><span>Fecha</span>
+    <input type="date" name="{{ t.i }}.fecha" value="{{ it.fecha or '' }}" min="{{ fecha_min }}" max="{{ fecha_max }}">{{ marcas(t, "fecha") }}</label>
+  {% if it.tipo not in ("agua", "sensaciones") %}
+  <label class="campo-voz"><span>Hora <span class="tenue">{% if it.franja %}(dijiste: {{ it.franja }}){% else %}(opcional){% endif %}</span></span>
+    <input type="time" name="{{ t.i }}.hora" value="{{ it.hora or '' }}"></label>
+  {% endif %}
+</div>
+{%- endmacro %}
+
+{% macro cruce(t) -%}
+{% set cands = t.extra.get("candidatas") or [] %}
+{% if cands %}
+<fieldset class="cruce-voz">
+  <legend>¿Es la misma sesión que registró tu reloj?</legend>
+  {% for a in cands %}
+  <label class="check"><input type="radio" name="{{ t.i }}.vincular" value="{{ a.clave }}"{% if t.extra.get("elegida") == a.clave %} checked{% endif %}>
+    <span>{{ a.deporte }} de {{ a.fuente|capitalize }} a las {{ a.hora[:5] }}: {{ a.duracion_s|duracion }}{% if a.fc_media %}, FC media {{ a.fc_media }}, máx {{ a.fc_max }}{% endif %}{% if a.zonas_s %}<small class="tenue zonas-voz">{% for z in a.zonas_s %}Z{{ loop.index }} {{ (z // 60) }} min{% if not loop.last %} · {% endif %}{% endfor %}</small>{% endif %}</span></label>
+  {% endfor %}
+  <label class="check"><input type="radio" name="{{ t.i }}.vincular" value=""{% if t.extra.get("elegida") == "" %} checked{% endif %}><span>No vincular</span></label>
+</fieldset>
+{% elif t.extra.get("sin_reloj") %}
+<p class="tenue nota-voz">{{ icono("link", 14) }} Sin datos del reloj todavía. Cuando la sincronización traiga la sesión, Hoy te propone vincularla.</p>
+{% endif %}
+{% if t.extra.get("diferencia") %}<p class="tenue nota-voz">{{ t.extra.diferencia }}. Se guarda lo que dijiste.</p>{% endif %}
+{%- endmacro %}
+
+{% macro sesion_comunes(t) -%}
+{% set it = t.item %}
+<div class="rejilla-voz">
+  <label class="campo-voz{% if t.marcas.get('duracion_min') %} con-marca{% endif %}"><span>Duración <span class="tenue">(min)</span></span>
+    <input type="number" name="{{ t.i }}.duracion_min" value="{{ it.duracion_min if it.duracion_min is not none else '' }}" min="1" max="600" inputmode="decimal" class="cifra"
+           placeholder="{% if t.extra.get('duracion_reloj') %}{{ (t.extra.vinculada.duracion_s / 60)|round|int }}{% elif t.extra.get('duracion_bloques') %}{{ t.extra.duracion_bloques|round|int }}{% endif %}">
+    {% if t.extra.get("duracion_reloj") %}<small class="tenue">Vacío: se usa la del reloj</small>{% elif t.extra.get("duracion_bloques") %}<small class="tenue">Vacío: la suma de los bloques</small>{% endif %}
+    {{ marcas(t, "duracion_min") }}</label>
+  {{ escala(t, "sensaciones", it.sensaciones, "Sensaciones", 1, 5) }}
+  {{ escala(t, "molestia_hombro", it.molestia_hombro, "Molestia del hombro", 0, 10) }}
+</div>
+<label class="campo-voz"><span>Notas <span class="tenue">(opcional)</span></span>
+  <input type="text" name="{{ t.i }}.notas" value="{{ it.notas or '' }}" maxlength="500"></label>
+{%- endmacro %}
+
+{% macro quitar_btn(ruta, texto="Quitar") -%}
+<button type="submit" name="quitar" value="{{ ruta }}" formaction="/rendimiento/voz/{{ e.id }}/editar" formnovalidate class="quitar-voz" aria-label="{{ texto }}">{{ icono("x", 18) }}<span>{{ texto }}</span></button>
+{%- endmacro %}
+
+{% block contenido %}
+<div class="r voz">
+<p><a class="volver" href="/rendimiento/voz">{{ icono("arrow-left", 18) }} Contar por voz</a></p>
+<h1>Relato del {{ e.fecha_base|fecha_corta }}</h1>
+
+{% if ocupado %}<p class="aviso" role="status">Ya estoy procesando un relato: es este.</p>{% endif %}
+
+{% if procesando %}
+{% include "rendimiento/_voz_estado.html" %}
+
+{% elif e.estado == "fallida" %}
+<p class="aviso mal" role="alert">{{ error }}.</p>
+{% if e.reintentable and rondas %}
+<form method="post" action="/rendimiento/voz/{{ e.id }}/reintentar" class="tarjeta">
+  <label for="t-reintento">Lo que entendí{% if rondas|length > 1 %} (última ronda){% endif %}</label>
+  <textarea id="t-reintento" name="texto" rows="4" maxlength="4000">{{ rondas[-1] }}</textarea>
+  <div class="acciones">
+    <button type="submit">Intentar de nuevo</button>
+    <button type="submit" class="secundario" formaction="/rendimiento/voz/{{ e.id }}/descartar">Descartar</button>
+  </div>
+</form>
+{% else %}
+<div class="acciones">
+  <a role="button" href="/rendimiento/voz">{{ icono("microphone", 20) }} Grabar de nuevo</a>
+  <form method="post" action="/rendimiento/voz/{{ e.id }}/descartar"><button type="submit" class="secundario">Descartar</button></form>
+</div>
+{% endif %}
+
+{% elif e.estado == "guardada" %}
+<p class="aviso bien" role="status">{{ icono("check", 20) }} Guardado.</p>
+<div class="tarjeta r-filas">
+  {% for r in registros %}
+  <a class="fila-enlace fila-menu" href="{{ r.url }}">{{ icono("barbell" if r.tipo == "sesion" else "check", 22) }}<span>{{ r.texto }}{% if r.tipo == "sesion" %}<small class="tenue">{{ "Vinculada con el reloj" if r.vinculada else "Sin vincular con el reloj" }}</small>{% endif %}</span>{{ icono("arrow-up-right", 18) }}</a>
+  {% endfor %}
+</div>
+{% if rondas %}<details class="transcripcion"><summary>Lo que dijiste</summary>{% for r in rondas %}<p>{{ r }}</p>{% endfor %}</details>{% endif %}
+<p><a role="button" class="secundario" href="/rendimiento/voz">{{ icono("microphone", 20) }} Contar otra cosa</a></p>
+
+{% else %}
+{% if error %}<p class="error" role="alert">{{ error }}.</p>{% endif %}
+<section class="transcripcion" aria-labelledby="h-trans">
+  <h2 id="h-trans">Lo que dijiste</h2>
+  {% for r in rondas[:-1] %}<details><summary>Ronda {{ loop.index }}</summary><p>{{ r }}</p></details>{% endfor %}
+  <blockquote>{{ rondas[-1] if rondas else "" }}</blockquote>
+</section>
+
+<form method="post" action="/rendimiento/voz/{{ e.id }}/guardar" id="f-borrador" class="borrador-voz" data-borrador="{{ e.id }}">
+{% if pregunta %}
+<section class="tarjeta pregunta-voz" aria-labelledby="h-preg" data-grabadora data-envio="/rendimiento/voz/{{ e.id }}/responder/audio" data-guardar-antes="/rendimiento/voz/{{ e.id }}/editar">
+  <h2 id="h-preg">{{ pregunta }}</h2>
+  <div class="responder">
+    <button type="button" class="secundario" data-grabar>{{ icono("microphone", 20) }}<span>Responder con voz</span></button>
+    <div class="grabando" data-grabando hidden>
+      <p class="contador-voz"><span class="punto" aria-hidden="true"></span><span data-contador>0:00</span></p>
+      <div class="acciones-grabar"><button type="button" data-detener>{{ icono("stop", 20) }}<span>Detener y enviar</span></button>
+        <button type="button" class="secundario" data-cancelar>Cancelar</button></div>
+    </div>
+    <p class="tenue" data-estado role="status" aria-live="polite"></p>
+    <p class="tenue sin-micro" data-sin-micro hidden>No hay micrófono disponible; escribe la respuesta.</p>
+    <label for="t-resp">O escríbela</label>
+    <div class="fila-respuesta"><input id="t-resp" type="text" name="respuesta" maxlength="4000" autocomplete="off">
+      <button type="submit" formaction="/rendimiento/voz/{{ e.id }}/responder" formnovalidate class="secundario">Responder</button></div>
+  </div>
+</section>
+{% elif ultima_ronda and bloqueada %}
+<p class="aviso" role="status">Ya no pregunto más: completa lo marcado con «Falta» a mano.</p>
+{% endif %}
+
+{% if not tarjetas %}
+<p class="tarjeta">No encontré comidas, entrenamientos ni cómo te sentiste en el relato.</p>
+{% endif %}
+
+{% for t in tarjetas %}
+{% set it = t.item %}
+<section class="tarjeta tarjeta-voz t-{{ it.tipo }}" aria-labelledby="h-it{{ t.i }}">
+  <header class="cab-voz">
+    <h2 id="h-it{{ t.i }}">{% if it.tipo == "sensaciones" %}{{ icono("heartbeat", 20, "c-muaythai") }} Cómo me sentí{% if it.fecha and it.fecha|length == 10 %}{% set dd = it.fecha|fecha_obj %} · {{ DIAS[dd.weekday()] }} {{ dd.day }}{% endif %}{% elif it.tipo == "comida" %}{{ icono("check", 20) }} {{ MOMENTOS.get(it.momento, "Comida") }}{% elif it.tipo == "agua" %}{{ icono("plus", 20) }} Agua{% elif it.tipo == "fuerza" %}{{ icono("barbell", 20, "c-fuerza") }} Sesión de fuerza{% else %}{{ icono("hand-fist", 20, "c-judo") }} Sesión de {{ {"judo": "judo", "bjj": "BJJ", "muaythai": "Muay Thai"}.get(it.disciplina, "combate") }}{% endif %}</h2>
+    {{ quitar_btn(t.i ~ "", "Quitar") }}
+  </header>
+  {% if it.citas %}<p class="cita-voz">«{{ it.citas|join(" … ") }}»</p>{% endif %}
+  {{ marcas(t, "cita") }}
+  {% for a in t.avisos %}<p class="tenue nota-voz">{{ a }}.</p>{% endfor %}
+
+  {% if it.tipo == "sensaciones" %}
+    {% set antes = t.extra.get("antes") or {} %}
+    {{ comunes(t) }}
+    <div class="rejilla-voz">
+      {% for k, nombre, corto, sentido in ESCALAS %}
+      {% if it[k] is not none or t.marcas.get(k) %}
+      <label class="campo-voz{% if t.marcas.get(k) %} con-marca{% endif %}"><span>{{ nombre }} <span class="tenue">({{ sentido }})</span></span>
+        <select name="{{ t.i }}.{{ k }}"><option value="">Sin dato</option>{% for n in range(1, 6) %}<option value="{{ n }}"{% if it[k] == n %} selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+        {% if k in antes %}<small class="tenue antes-voz">{{ nombre }}: antes {{ antes[k] }}, ahora {{ it[k] }}</small>{% endif %}
+        {{ marcas(t, k) }}</label>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <fieldset class="sintomas-voz">
+      <legend>Síntomas</legend>
+      <input type="hidden" name="{{ t.i }}.sintomas.presente" value="1">
+      {% for c, nombre in SINTOMAS.items() %}
+      <label class="check{% if t.marcas.get('sintomas.' ~ c) %} con-marca{% endif %}"><input type="checkbox" name="{{ t.i }}.sintomas" value="{{ c }}"{% if c in it.sintomas %} checked{% endif %}> {{ nombre }}
+        {{ marcas(t, "sintomas." ~ c) }}</label>
+      {% endfor %}
+    </fieldset>
+    {% if t.extra.get("existente") and t.extra.existente.sintomas %}<p class="tenue nota-voz">Ya tenías: {% for c in t.extra.existente.sintomas %}{{ SINTOMAS[c]|lower }}{% if not loop.last %}, {% endif %}{% endfor %}. Se suman.</p>{% endif %}
+    <label class="campo-voz{% if t.marcas.get('sintomas_otros') %} con-marca{% endif %}"><span>Otros síntomas <span class="tenue">(opcional)</span></span>
+      <input type="text" name="{{ t.i }}.sintomas_otros" value="{{ it.sintomas_otros or '' }}" maxlength="200">{{ marcas(t, "sintomas_otros") }}</label>
+    <label class="campo-voz{% if t.marcas.get('dolor') %} con-marca{% endif %}"><span>Dolor <span class="tenue">(opcional)</span></span>
+      <input type="text" name="{{ t.i }}.dolor" value="{{ it.dolor or '' }}" maxlength="300" placeholder="cuello, lado derecho, 6 de 10">
+      {% if t.extra.get("existente") and t.extra.existente.dolor and it.dolor %}<small class="tenue">Ya tenías «{{ t.extra.existente.dolor }}»: se agrega.</small>{% endif %}
+      {{ marcas(t, "dolor") }}</label>
+    <label class="campo-voz{% if t.marcas.get('sin_entreno') %} con-marca{% endif %}"><span>¿Entrenaste?</span>
+      <select name="{{ t.i }}.sin_entreno"><option value="">Sin dato</option>{% for k, n in SIN_ENTRENO.items() %}<option value="{{ k }}"{% if it.sin_entreno == k %} selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+      {% if "sin_entreno" in antes %}<small class="tenue antes-voz">Antes: {{ SIN_ENTRENO[antes.sin_entreno] }}</small>{% endif %}
+      {{ marcas(t, "sin_entreno") }}</label>
+
+  {% elif it.tipo == "comida" %}
+    {{ comunes(t) }}
+    <label class="campo-voz{% if t.marcas.get('momento') %} con-marca{% endif %}"><span>Momento</span>
+      <select name="{{ t.i }}.momento"><option value="">Elige…</option>{% for k, n in MOMENTOS.items() %}<option value="{{ k }}"{% if it.momento == k %} selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+      {{ marcas(t, "momento") }}</label>
+    <label class="campo-voz{% if t.marcas.get('texto') %} con-marca{% endif %}"><span>Qué comiste</span>
+      <textarea name="{{ t.i }}.texto" rows="2" maxlength="500">{{ it.texto or '' }}</textarea>{{ marcas(t, "texto") }}</label>
+    <input type="hidden" name="{{ t.i }}.segun_plan.presente" value="1">
+    <label class="check"><input type="checkbox" name="{{ t.i }}.segun_plan" value="1"{% if it.segun_plan %} checked{% endif %}> Según el plan{% if t.extra.get("del_plan") %} <span class="tenue">(intercambios copiados del plan)</span>{% endif %}</label>
+    <fieldset class="intercambios">
+      <legend>Intercambios <span class="tenue">(solo si los dijiste)</span></legend>
+      {% for g in GRUPOS %}
+      <label class="intercambio"><span>{{ g|capitalize }}</span>
+        <input type="number" name="{{ t.i }}.intercambios.{{ g }}" min="0" max="12" inputmode="numeric" class="cifra" value="{{ it.intercambios.get(g, '') }}">
+        {{ marcas(t, "intercambios." ~ g) }}</label>
+      {% endfor %}
+    </fieldset>
+    {% if t.extra.get("existente") %}{% set ya = t.extra.existente %}
+    <fieldset class="existente-voz">
+      <legend>Ya registraste: «{{ ya.texto or ya.texto_intercambios }}»</legend>
+      <label class="check"><input type="radio" name="{{ t.i }}.modo_texto" value="reemplazar"{% if it.modo_texto != "agregar" %} checked{% endif %}> Reemplazar</label>
+      <label class="check"><input type="radio" name="{{ t.i }}.modo_texto" value="agregar"{% if it.modo_texto == "agregar" %} checked{% endif %}> Agregar al texto</label>
+    </fieldset>
+    {% endif %}
+
+  {% elif it.tipo == "agua" %}
+    {% if t.extra.get("total") is not none %}
+    <p class="cifra-voz">{% if it.modo == "total" %}<b>{{ it.vasos }} vasos</b> en total <span class="tenue">(ahora {{ t.extra.ahora }})</span>{% else %}<b>+{{ it.vasos }} vasos</b> <span class="tenue">(ahora {{ t.extra.ahora }}, quedan {{ t.extra.total }})</span>{% endif %}</p>
+    {% endif %}
+    {% if t.extra.get("litros") %}<p class="tenue nota-voz">Vasos de {{ VASO_ML }} ml: 1 L = 5 vasos.</p>{% endif %}
+    {{ comunes(t) }}
+    <div class="rejilla-voz">
+      {{ numero(t, "vasos", it.vasos, "Vasos", "1", "de " ~ VASO_ML ~ " ml") }}
+      <label class="campo-voz{% if t.marcas.get('modo') %} con-marca{% endif %}"><span>Son</span>
+        <select name="{{ t.i }}.modo"><option value="">Elige…</option><option value="total"{% if it.modo == "total" %} selected{% endif %}>El total de hoy</option><option value="sumar"{% if it.modo == "sumar" %} selected{% endif %}>Para sumar</option></select>
+        {{ marcas(t, "modo") }}</label>
+    </div>
+
+  {% elif it.tipo == "fuerza" %}
+    {{ comunes(t) }}
+    {{ cruce(t) }}
+    {{ sesion_comunes(t) }}
+    {{ marcas(t, "ejercicios") }}
+    {% for ej in it.ejercicios %}{% set k = loop.index0 %}
+    <div class="ejercicio-voz">
+      <div class="cab-ejercicio">
+        <label class="campo-voz{% if t.marcas.get('e' ~ k ~ '.catalogo') %} con-marca{% endif %}"><span>Ejercicio <span class="tenue">(dijiste «{{ ej.nombre_dicho }}»)</span></span>
+          <select name="{{ t.i }}.e{{ k }}.catalogo"><option value="">Elige…</option>{% for x in ejercicios %}<option value="{{ x.nombre }}"{% if ej.catalogo == x.nombre %} selected{% endif %}>{{ x.nombre }}</option>{% endfor %}</select>
+          {{ marcas(t, "e" ~ k ~ ".catalogo") }}</label>
+        {{ quitar_btn(t.i ~ ".e" ~ k, "Quitar ejercicio") }}
+      </div>
+      {{ marcas(t, "e" ~ k ~ ".series") }}
+      {% set unidad = "kg cada mancuerna" if ej._fila and ej._fila.tipo_carga == "mancuerna_par" else "kg de lastre" if ej._fila and ej._fila.tipo_carga == "peso_corporal_lastre" else "kg" %}
+      {% for s in ej.series %}{% set j = loop.index0 %}
+      <div class="serie-voz">
+        <span class="n-serie">{{ loop.index }}</span>
+        {{ numero(t, "e" ~ k ~ ".s" ~ j ~ ".reps", s.reps, "Reps") }}
+        {{ numero(t, "e" ~ k ~ ".s" ~ j ~ ".carga_kg", s.carga_kg, "Carga", "0.5", unidad) }}
+        {{ numero(t, "e" ~ k ~ ".s" ~ j ~ ".rpe", s.rpe, "RPE", "0.5") }}
+        {{ quitar_btn(t.i ~ ".e" ~ k ~ ".s" ~ j, "Quitar serie " ~ loop.index) }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+  {% else %}
+    {{ comunes(t) }}
+    <label class="campo-voz{% if t.marcas.get('disciplina') %} con-marca{% endif %}"><span>Disciplina</span>
+      <select name="{{ t.i }}.disciplina"><option value="">Elige…</option>{% for k, n in (("judo", "Judo"), ("bjj", "BJJ"), ("muaythai", "Muay Thai")) %}<option value="{{ k }}"{% if it.disciplina == k %} selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+      {{ marcas(t, "disciplina") }}</label>
+    {{ cruce(t) }}
+    {{ sesion_comunes(t) }}
+    {% for b in it.bloques %}{% set k = loop.index0 %}
+    <div class="bloque-voz">
+      <div class="cab-ejercicio">
+        <label class="campo-voz{% if t.marcas.get('b' ~ k ~ '.tipo') %} con-marca{% endif %}"><span>Bloque {{ loop.index }}</span>
+          <select name="{{ t.i }}.b{{ k }}.tipo"><option value="">Elige…</option>{% for x, n in TIPOS_BLOQUE.items() %}<option value="{{ x }}"{% if b.tipo == x %} selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+          {{ marcas(t, "b" ~ k ~ ".tipo") }}</label>
+        {{ quitar_btn(t.i ~ ".b" ~ k, "Quitar bloque " ~ loop.index) }}
+      </div>
+      <div class="rejilla-voz">
+        {{ numero(t, "b" ~ k ~ ".duracion_min", b.duracion_min, "Duración", "1", "min") }}
+        {{ numero(t, "b" ~ k ~ ".rounds", b.rounds, "Rounds") }}
+      </div>
+      {% for n in b.entradas %}{% set j = loop.index0 %}{% set r = "b" ~ k ~ ".n" ~ j %}
+      <div class="entrada-voz">
+        <label class="campo-voz{% if t.marcas.get(r ~ '.catalogo') %} con-marca{% endif %}"><span>Técnica{% if n.nombre_dicho %} <span class="tenue">(dijiste «{{ n.nombre_dicho }}»)</span>{% endif %}</span>
+          <select name="{{ t.i }}.{{ r }}.catalogo"><option value="">Solo como detalle</option>{% for x in tecnicas.get(it.disciplina or "judo", []) %}<option value="{{ x.nombre }}"{% if n.catalogo == x.nombre %} selected{% endif %}>{{ x.nombre }}</option>{% endfor %}</select>
+          {{ marcas(t, r ~ ".catalogo") }}</label>
+        <div class="rejilla-voz">
+          <label class="campo-voz"><span>Situación <span class="tenue">(opcional)</span></span>
+            <select name="{{ t.i }}.{{ r }}.situacion"><option value="">Sin dato</option>{% for x, nn in SITUACIONES.items() %}<option value="{{ x }}"{% if n.situacion == x %} selected{% endif %}>{{ nn }}</option>{% endfor %}</select></label>
+          {% if b.tipo in CON_RESULTADO %}
+          <label class="campo-voz"><span>Resultado</span>
+            <select name="{{ t.i }}.{{ r }}.resultado">{% for x, nn in RESULTADOS.items() %}<option value="{{ x }}"{% if n.resultado == x %} selected{% endif %}>{{ nn }}</option>{% endfor %}</select></label>
+          {% endif %}
+        </div>
+        <label class="campo-voz"><span>Detalle <span class="tenue">(opcional)</span></span>
+          <input type="text" name="{{ t.i }}.{{ r }}.detalle" value="{{ n.detalle or '' }}" maxlength="200"></label>
+        {{ quitar_btn(t.i ~ "." ~ r, "Quitar técnica") }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  {% endif %}
+</section>
+{% endfor %}
+
+<div class="acciones pie-voz">
+  {% if tarjetas %}<button type="submit" data-guardar-todo>{{ icono("check", 20) }}<span>Guardar todo</span></button>{% endif %}
+  <button type="submit" class="secundario" formaction="/rendimiento/voz/{{ e.id }}/descartar" formnovalidate onclick="return confirm('¿Descartar este relato? No se guarda nada.')">Descartar</button>
+</div>
+{% if bloqueada %}<p class="tenue">Para guardar, completa lo marcado con «Falta» y confirma o corrige lo marcado para revisar.</p>{% endif %}
+</form>
+{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/voz.js?v=2"></script>{% endblock %}

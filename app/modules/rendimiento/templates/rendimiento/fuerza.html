@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Fuerza{% endblock %}
+{% block contenido %}
+<div class="r registro">
+<p><a href="/rendimiento/registrar">{{ icono("arrow-left", 18) }} Registrar</a></p>
+<div class="cabecera">
+  <div><h1>Fuerza</h1><p class="suave">{{ s.fecha|fecha_larga|capitalize }}{% if s.guardada %} · guardada{% endif %}</p></div>
+</div>
+{% if error %}<p class="aviso mal" role="alert">{{ error }}</p>{% endif %}
+
+{% if anterior %}
+<form method="post" action="/rendimiento/sesiones/{{ s.id }}/repetir" class="repetir">
+  <button type="submit" class="secundario">{{ icono("copy", 20) }}<span>Repetir la sesión anterior</span></button>
+  <small class="tenue">{{ anterior.fecha|fecha_larga|capitalize }}, {{ anterior_n }} ejercicio{{ "s" if anterior_n != 1 }}</small>
+</form>
+{% endif %}
+
+<div id="bloques">
+  {% for b in bloques %}{% include "rendimiento/_ejercicio.html" %}{% endfor %}
+</div>
+
+<form method="post" action="/rendimiento/sesiones/{{ s.id }}/ejercicios" class="agregar-ejercicio"
+      hx-post="/rendimiento/sesiones/{{ s.id }}/ejercicios" hx-target="#bloques" hx-swap="beforeend" hx-trigger="change">
+  <label for="ej-nuevo">Agregar ejercicio</label>
+  <div class="fila-agregar">
+    <select id="ej-nuevo" name="ejercicio_id" required>
+      <option value="">Elige un ejercicio</option>
+      {% if recientes %}
+      <optgroup label="Recientes">
+        {% for e in recientes %}<option value="{{ e.id }}">{{ e.nombre }}</option>{% endfor %}
+      </optgroup>
+      {% endif %}
+      {% for grupo, items in ejercicios|groupby("grupo") %}
+      <optgroup label="{{ grupo|capitalize }}">
+        {% for e in items %}<option value="{{ e.id }}">{{ e.nombre }}{% if e.carga_hombro %} (carga el hombro){% endif %}</option>{% endfor %}
+      </optgroup>
+      {% endfor %}
+    </select>
+    <noscript><button type="submit" class="secundario">Agregar</button></noscript>
+  </div>
+</form>
+<script>
+  // Tras agregar un ejercicio, el selector vuelve a "Elige un ejercicio" y el nuevo bloque queda a la vista.
+  document.body.addEventListener("htmx:afterSwap", function (ev) {
+    if (ev.detail.target.id !== "bloques") return;
+    var sel = document.getElementById("ej-nuevo"); sel.value = "";
+    var ultimo = ev.detail.target.lastElementChild;
+    if (ultimo && ultimo.scrollIntoView) ultimo.scrollIntoView({ block: "nearest" });
+  });
+</script>
+
+<p id="total-sesion" class="total-sesion" aria-live="polite">Carga total <b class="cifra">{{ total_g|kg }}</b></p>
+{% if peso_corporal_g is none and bloques|selectattr("carga_g", "none")|list %}
+<p class="tenue">Para la carga de los ejercicios de peso corporal falta tu peso: regístralo en Tests.</p>
+{% endif %}
+
+{% include "rendimiento/_cierre.html" %}
+</div>
+{% endblock %}
